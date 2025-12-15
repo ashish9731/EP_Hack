@@ -11,6 +11,9 @@ sys.path.insert(0, str(backend_path.parent))
 sys.path.insert(0, os.getcwd())
 sys.path.insert(0, os.path.join(os.getcwd(), 'backend'))
 
+# Load environment variables
+load_dotenv(ROOT_DIR / '.env')
+
 from fastapi import FastAPI, APIRouter, HTTPException, UploadFile, File, Depends, Response, Cookie, Header
 from fastapi.responses import StreamingResponse, FileResponse
 from dotenv import load_dotenv
@@ -56,16 +59,8 @@ video_processor = None
 def get_video_processor():
     global video_processor
     if video_processor is None:
-        # For now, we'll create a mock video processor
-        class MockVideoProcessor:
-            def process_video(self, video_path, user_id):
-                # Mock implementation
-                return {
-                    "executive_presence_score": 85,
-                    "feedback": "Good presentation skills",
-                    "recommendations": ["Improve eye contact", "Work on posture"]
-                }
-        video_processor = MockVideoProcessor()
+        from services.video_processor import VideoProcessorService
+        video_processor = VideoProcessorService()
     return video_processor
 
 @api_router.post("/auth/signup")
@@ -73,47 +68,121 @@ async def signup(request: SignupRequest, response: Response):
     logger.info(f"Signup attempt for email: {request.email}")
     
     try:
-        # Create a new user (but don't actually store it since we're bypassing auth)
-        # Just return a success message without creating sessions
-        logger.info(f"Mock signup successful for: {request.email}")
+        # Import Supabase client
+        from utils.supabase_client import get_supabase_client
+        supabase = get_supabase_client()
         
-        # Return mock user data
-        user_response = {
-            "user_id": "mock_user_123",
+        # Use Supabase Auth to sign up the user
+        auth_response = supabase.auth.sign_up({
             "email": request.email,
+            "password": request.password,
+            "options": {
+                "data": {
+                    "name": request.name
+                }
+            }
+        })
+        
+        # Get the user data from the auth response
+        user_data = auth_response.user
+        
+        # Also store user in our users table for compatibility with existing code
+        user_table_data = {
+            "id": user_data.id,
+            "email": user_data.email,
             "name": request.name,
-            "created_at": datetime.now(timezone.utc).isoformat()
+            "picture": None,
+            "created_at": user_data.created_at
         }
         
-        logger.info(f"Returning mock user data: {user_response}")
-        return {"user": user_response, "session_token": "mock_token_123"}
+        try:
+            get_supabase_client().table("users").insert(user_table_data).execute()
+        except Exception as e:
+            # User might already exist in the table, which is fine
+            pass
+        
+        # Create our own session token for compatibility with existing frontend
+        session_token = str(uuid.uuid4())
+        
+        response.set_cookie(
+            key="session_token",
+            value=session_token,
+            httponly=True,
+            secure=True,
+            samesite="none",
+            path="/",
+            max_age=7 * 24 * 60 * 60
+        )
+        
+        # Transform user data to match existing structure
+        user = {
+            "user_id": user_data.id,
+            "email": user_data.email,
+            "name": request.name,
+            "picture": None,
+            "created_at": user_data.created_at
+        }
+        
+        return {"user": user, "session_token": session_token}
         
     except Exception as e:
-        logger.error(f"Signup error: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Signup error: {str(e)}")
+        # Handle specific Supabase auth errors
+        if "already registered" in str(e).lower() or "email_taken" in str(e).lower():
+            raise HTTPException(status_code=400, detail="Email already registered")
+        else:
+            logger.error(f"Signup error: {str(e)}", exc_info=True)
+            raise HTTPException(status_code=500, detail=f"Signup error: {str(e)}")
 
 @api_router.post("/auth/login")
 async def login(request: LoginRequest, response: Response):
     logger.info(f"Login attempt for email: {request.email}")
     
     try:
-        # Mock login - just return success without validating credentials
-        logger.info(f"Mock login successful for: {request.email}")
+        # Import Supabase client
+        from utils.supabase_client import get_supabase_client
+        supabase = get_supabase_client()
         
-        # Return mock user data
-        user_response = {
-            "user_id": "mock_user_123",
+        # Use Supabase Auth to sign in the user
+        auth_response = supabase.auth.sign_in_with_password({
             "email": request.email,
-            "name": "Demo User",
-            "created_at": datetime.now(timezone.utc).isoformat()
+            "password": request.password
+        })
+        
+        # Get the user data from the auth response
+        user_data = auth_response.user
+        session_data = auth_response.session
+        
+        # Create our own session token for compatibility with existing frontend
+        session_token = str(uuid.uuid4())
+        
+        response.set_cookie(
+            key="session_token",
+            value=session_token,
+            httponly=True,
+            secure=True,
+            samesite="none",
+            path="/",
+            max_age=7 * 24 * 60 * 60
+        )
+        
+        # Transform user data to match existing structure
+        user = {
+            "user_id": user_data.id,
+            "email": user_data.email,
+            "name": getattr(user_data, 'user_metadata', {}).get('name', ''),
+            "picture": getattr(user_data, 'user_metadata', {}).get('picture'),
+            "created_at": user_data.created_at
         }
         
-        logger.info(f"Returning mock user data: {user_response}")
-        return {"user": user_response, "session_token": "mock_token_123"}
+        return {"user": user, "session_token": session_token}
         
     except Exception as e:
-        logger.error(f"Login error: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Authentication error: {str(e)}")
+        # Handle specific Supabase auth errors
+        if "Invalid login credentials" in str(e):
+            raise HTTPException(status_code=401, detail="Invalid credentials")
+        else:
+            logger.error(f"Login error: {str(e)}", exc_info=True)
+            raise HTTPException(status_code=500, detail=f"Authentication error: {str(e)}")
 
 @api_router.get("/auth/google-redirect")
 async def google_auth_redirect():
@@ -124,18 +193,29 @@ async def google_auth_redirect():
     logger.info(f"Generated mock auth URL: {auth_url}")
     return {"auth_url": auth_url}
 
-# Mock user function to bypass authentication
-async def get_mock_user():
-    return {
-        "user_id": "mock_user_123",
-        "email": "demo@example.com",
-        "name": "Demo User",
-        "created_at": datetime.now(timezone.utc).isoformat()
-    }
+def get_current_user(session_token: Optional[str] = Cookie(None), authorization: Optional[str] = Header(None)):
+    # Import the real authentication function
+    from utils.supabase_auth import get_current_user as supabase_get_user
+    try:
+        # This would be an async call in reality, but for now we'll mock it
+        return {
+            "user_id": "mock_user_123",
+            "email": "demo@example.com",
+            "name": "Demo User",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+    except:
+        # Return mock user if auth fails
+        return {
+            "user_id": "mock_user_123",
+            "email": "demo@example.com",
+            "name": "Demo User",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
 
 @api_router.get("/auth/me")
 async def get_me(session_token: Optional[str] = Cookie(None), authorization: Optional[str] = Header(None)):
-    user = await get_mock_user()
+    user = get_current_user(session_token, authorization)
     return user
 
 @api_router.post("/auth/logout")
@@ -158,14 +238,15 @@ async def upload_video(
     session_token: Optional[str] = Cookie(None),
     authorization: Optional[str] = Header(None)
 ):
-    user = await get_mock_user()
+    user = get_current_user(session_token, authorization)
     
     if file.size and file.size > 200 * 1024 * 1024:
         raise HTTPException(status_code=400, detail="Video size exceeds 200MB limit")
     
-    # Save video to storage (mock implementation)
+    # Save video to storage
     try:
-        video_id = f"video_{uuid.uuid4().hex}"
+        from utils.gridfs_helper import save_video_to_storage
+        video_id = save_video_to_storage(file, user["user_id"])
         logger.info(f"Video uploaded successfully: {video_id}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to save video: {str(e)}")
@@ -192,9 +273,9 @@ async def process_video(
     session_token: Optional[str] = Cookie(None),
     authorization: Optional[str] = Header(None)
 ):
-    user = await get_mock_user()
+    user = get_current_user(session_token, authorization)
     
-    # Mock video processing
+    # Create a processing job
     job_id = f"job_{uuid.uuid4().hex}"
     
     job_data = {
@@ -219,13 +300,15 @@ async def get_job_status(
     session_token: Optional[str] = Cookie(None),
     authorization: Optional[str] = Header(None)
 ):
-    user = await get_mock_user()
+    user = get_current_user(session_token, authorization)
     
-    # Mock job status
+    # For now, return mock job status but this should be replaced with real database lookup
     job = {
         "id": job_id,
         "user_id": user["user_id"],
         "status": "completed",
+        "progress": 100,
+        "current_step": "Analysis complete",
         "created_at": datetime.now(timezone.utc).isoformat(),
         "updated_at": datetime.now(timezone.utc).isoformat()
     }
@@ -239,18 +322,26 @@ async def get_report(
     session_token: Optional[str] = Cookie(None),
     authorization: Optional[str] = Header(None)
 ):
-    user = await get_mock_user()
+    user = get_current_user(session_token, authorization)
     
-    # Mock report
+    # For now, return mock report but this should be replaced with real database lookup
     report = {
         "id": report_id,
         "user_id": user["user_id"],
         "created_at": datetime.now(timezone.utc).isoformat(),
-        "content": {
-            "executive_presence_score": 85,
-            "feedback": "Great presentation skills demonstrated",
-            "recommendations": ["Improve eye contact", "Work on posture"]
-        }
+        "overall_score": 85,
+        "gravitas_score": 80,
+        "communication_score": 85,
+        "presence_score": 82,
+        "storytelling_score": 78,
+        "transcript": "This is a sample transcript of the analyzed video.",
+        "feedback": {
+            "gravitas": "Good demonstration of authority and confidence.",
+            "communication": "Clear articulation and appropriate pace.",
+            "presence": "Strong eye contact and commanding posture.",
+            "storytelling": "Effective use of narrative to engage the audience."
+        },
+        "recommendations": ["Improve eye contact", "Work on posture"]
     }
     
     logger.info(f"Returning report: {report}")
@@ -261,24 +352,25 @@ async def list_reports(
     session_token: Optional[str] = Cookie(None),
     authorization: Optional[str] = Header(None)
 ):
-    user = await get_mock_user()
+    user = get_current_user(session_token, authorization)
     
-    # Mock reports list
+    # For now, return mock reports list but this should be replaced with real database lookup
     reports = [
         {
             "id": f"report_{uuid.uuid4().hex}",
             "user_id": user["user_id"],
             "created_at": datetime.now(timezone.utc).isoformat(),
-            "content": {
-                "executive_presence_score": 85,
-                "feedback": "Good presentation skills",
-                "recommendations": ["Improve eye contact", "Work on posture"]
-            }
+            "overall_score": 85,
+            "gravitas_score": 80,
+            "communication_score": 85,
+            "presence_score": 82,
+            "storytelling_score": 78,
+            "title": "Initial Assessment"
         }
     ]
     
     logger.info(f"Returning reports list with {len(reports)} items")
-    return reports
+    return {"reports": reports}
 
 @api_router.get("/videos/{video_id}/stream")
 async def stream_video(
@@ -286,9 +378,9 @@ async def stream_video(
     session_token: Optional[str] = Cookie(None),
     authorization: Optional[str] = Header(None)
 ):
-    user = await get_mock_user()
+    user = get_current_user(session_token, authorization)
     
-    # Mock video streaming
+    # For now, return mock response but this should stream actual video
     logger.info(f"Streaming video: {video_id}")
     return {"message": "Video streaming endpoint", "video_id": video_id}
 
@@ -328,34 +420,23 @@ async def root():
 async def health_check():
     return {"status": "healthy", "timestamp": datetime.now(timezone.utc).isoformat()}
 
-# Placeholder for async video processing function
 async def process_video_async(job_id: str, video_id: str, user_id: str):
-    """Placeholder for video processing - in a real implementation this would do the actual processing"""
+    """Process video using the real video processor service"""
     try:
         # Update job status to processing
         logger.info(f"Processing video {video_id} for job {job_id}")
         
-        # Simulate processing delay
-        await asyncio.sleep(2)
+        # Get the video processor service
+        video_processor = get_video_processor()
         
-        # Create a sample report
-        report_data = {
-            "id": f"report_{uuid.uuid4().hex}",
-            "user_id": user_id,
-            "video_id": video_id,
-            "job_id": job_id,
-            "created_at": datetime.now(timezone.utc).isoformat(),
-            "content": {
-                "executive_presence_score": 85,
-                "feedback": "Great presentation skills demonstrated",
-                "recommendations": ["Improve eye contact", "Work on posture"]
-            }
-        }
+        # Process the video
+        report_id = await video_processor.process_video(job_id, video_id, user_id)
         
-        logger.info(f"Video processing completed for job {job_id}")
+        logger.info(f"Video processing completed for job {job_id}, report_id: {report_id}")
         
     except Exception as e:
         logger.error(f"Video processing failed for job {job_id}: {str(e)}")
+        # In a real implementation, you would update the job status to failed in the database
 
 @api_router.get("/learning/daily-tip")
 async def get_daily_tip(

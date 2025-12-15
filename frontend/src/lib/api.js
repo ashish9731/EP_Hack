@@ -37,200 +37,54 @@ api.interceptors.request.use((config) => {
 });
 
 export const authAPI = {
-  signup: (data) => Promise.resolve({
-    data: {
-      user: {
-        user_id: "mock_user_123",
-        email: data.email,
-        name: data.name,
-        created_at: new Date().toISOString()
-      },
-      session_token: "mock_session_token"
-    }
-  }),
-  login: (data) => Promise.resolve({
-    data: {
-      user: {
-        user_id: "mock_user_123",
-        email: data.email,
-        name: "Demo User",
-        created_at: new Date().toISOString()
-      },
-      session_token: "mock_session_token"
-    }
-  }),
+  signup: (data) => api.post('/auth/signup', data),
+  login: (data) => api.post('/auth/login', data),
   logout: () => {
     localStorage.removeItem('session_token');
-    return Promise.resolve({ data: { message: 'Logged out successfully' } });
+    return api.post('/auth/logout');
   },
-  getMe: () => Promise.resolve({
-    data: {
-      user_id: "mock_user_123",
-      email: "demo@example.com",
-      name: "Demo User",
-      created_at: new Date().toISOString()
-    }
-  }),
-  googleRedirect: () => Promise.resolve({
-    data: {
-      auth_url: "/dashboard"
-    }
-  }),
+  getMe: () => api.get('/auth/me'),
+  googleRedirect: () => api.get('/auth/google-redirect'),
 };
 
 export const videoAPI = {
   upload: (file, onProgress) => {
-    // Simulate upload progress
-    if (onProgress) {
-      setTimeout(() => onProgress(50), 100);
-      setTimeout(() => onProgress(100), 200);
-    }
-    
-    return Promise.resolve({
-      data: {
-        video_id: "mock_video_123",
-        message: "Video uploaded successfully"
-      }
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post('/videos/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress: (progressEvent) => {
+        const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+        if (onProgress) onProgress(percentCompleted);
+      },
     });
   },
-  process: (videoId) => Promise.resolve({
-    data: {
-      job_id: "mock_job_123",
-      message: "Processing started"
-    }
-  }),
-  getJobStatus: (jobId) => Promise.resolve({
-    data: {
-      status: "completed",
-      progress: 100,
-      report_id: "mock_report_123"
-    }
-  }),
+  process: (videoId) => api.post(`/videos/${videoId}/process`),
+  getJobStatus: (jobId) => api.get(`/jobs/${jobId}/status`),
 };
 
 export const reportAPI = {
-  getReport: (reportId) => Promise.resolve({
-    data: {
-      id: reportId,
-      created_at: new Date().toISOString(),
-      overall_score: 75,
-      gravitas_score: 70,
-      communication_score: 80,
-      presence_score: 75,
-      storytelling_score: 70,
-      video_duration: 180,
-      title: "Mock Report",
-      transcription: "This is a mock transcription of the video.",
-      feedback: {
-        gravitas: "Good gravitas shown in the video.",
-        communication: "Clear communication throughout.",
-        presence: "Strong presence demonstrated.",
-        storytelling: "Effective storytelling techniques used."
-      }
-    }
-  }),
-  listReports: () => Promise.resolve({
-    data: {
-      reports: [
-        {
-          id: "report_1",
-          created_at: new Date().toISOString(),
-          overall_score: 75,
-          gravitas_score: 70,
-          communication_score: 80,
-          presence_score: 75,
-          storytelling_score: 70,
-          video_duration: 180,
-          title: "Initial Assessment"
-        }
-      ]
-    }
-  }),
-  createShareLink: (reportId) => Promise.resolve({
-    data: {
-      share_url: `https://example.com/shared/${reportId}`
-    }
-  }),
-  getSharedReport: (shareId) => Promise.resolve({
-    data: {
-      id: "shared_report_1",
-      created_at: new Date().toISOString(),
-      overall_score: 75,
-      gravitas_score: 70,
-      communication_score: 80,
-      presence_score: 75,
-      storytelling_score: 70,
-      video_duration: 180,
-      title: "Shared Mock Report",
-      transcription: "This is a mock transcription of the shared video.",
-      feedback: {
-        gravitas: "Good gravitas shown in the video.",
-        communication: "Clear communication throughout.",
-        presence: "Strong presence demonstrated.",
-        storytelling: "Effective storytelling techniques used."
-      }
-    }
-  }),
+  getReport: (reportId) => api.get(`/reports/${reportId}`),
+  listReports: () => api.get('/reports'),
+  createShareLink: (reportId) => api.post(`/reports/${reportId}/share`),
+  getSharedReport: (shareId) => api.get(`/shared/reports/${shareId}`),
 };
 
 export const coachingAPI = {
-  createRequest: (payload) => Promise.resolve({
-    data: {
-      message: "Coaching request submitted successfully",
-      request_id: "mock_request_123"
-    }
-  }),
+  createRequest: (payload) => api.post('/coaching/requests', payload),
 };
 
 
 export const subscriptionAPI = {
-  getStatus: () => Promise.resolve({
-    data: {
-      tier: "premium",
-      status: "active",
-      video_limit: 100,
-      videos_used: 1,
-      is_whitelisted: true
-    }
-  }),
-  upgrade: (tier, billingCycle) => Promise.resolve({
-    data: {
-      message: "Subscription upgraded successfully"
-    }
-  }),
-  checkVideoLimit: () => Promise.resolve({
-    data: {
-      can_upload: true,
-      remaining_videos: 99
-    }
-  }),
-  incrementUsage: () => Promise.resolve({
-    data: {
-      message: "Usage incremented successfully"
-    }
-  }),
+  getStatus: () => api.get('/subscription/status'),
+  upgrade: (tier, billingCycle) => api.post('/subscription/upgrade', { tier, billing_cycle: billingCycle }),
+  checkVideoLimit: () => api.post('/subscription/check-video-limit'),
+  incrementUsage: () => api.post('/subscription/increment-usage'),
 };
 
 export const retentionAPI = {
-  getSettings: () => Promise.resolve({
-    data: {
-      default_retention_period: 30,
-      video_retention_periods: {}
-    }
-  }),
-  setDefaultRetention: (retention_period) => Promise.resolve({
-    data: {
-      message: "Default retention period updated successfully"
-    }
-  }),
-  setVideoRetention: (videoId, retention_period) => Promise.resolve({
-    data: {
-      message: "Video retention period updated successfully"
-    }
-  }),
-  deleteVideo: (videoId) => Promise.resolve({
-    data: {
-      message: "Video deleted successfully"
-    }
-  }),
+  getSettings: () => api.get('/retention/settings'),
+  setDefaultRetention: (retention_period) => api.put('/retention/settings/default', { retention_period }),
+  setVideoRetention: (videoId, retention_period) => api.put(`/retention/videos/${videoId}`, { retention_period }),
+  deleteVideo: (videoId) => api.delete(`/retention/videos/${videoId}`),
 };
