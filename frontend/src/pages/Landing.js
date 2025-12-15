@@ -5,11 +5,12 @@ import { ArrowRight, CheckCircle, BarChart3, Video, Brain, MessageSquare, Sparkl
 
 const Landing = () => {
   const navigate = useNavigate();
-  const [isLoggedIn, setIsLoggedIn] = useState(true); // Always logged in
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
-    // Skip authentication check
-    setIsLoggedIn(true);
+    // Check if user is logged in by checking for session token
+    const token = localStorage.getItem('session_token');
+    setIsLoggedIn(!!token);
   }, []);
   
   return (
@@ -27,20 +28,30 @@ const Landing = () => {
             <span>Executive Presence</span>{' '}
             <span style={{color: '#D4AF37'}}>Quotient</span>
           </div>
-          <div className="flex gap-3">
-            <Button 
-              variant="ghost" 
-              onClick={() => navigate('/pricing')}
-            >
-              Pricing
-            </Button>
-            <Button 
+          {isLoggedIn ? (
+              <Button 
                 onClick={() => navigate('/dashboard')}
                 style={{backgroundColor: '#D4AF37', color: '#FFFFFF'}}
               >
                 <LayoutDashboard className="mr-2 h-4 w-4" /> Dashboard
               </Button>
-          </div>
+            ) : (
+              <>
+                <Button 
+                  variant="ghost" 
+                  onClick={() => navigate('/login')} 
+                  data-testid="login-link"
+                >
+                  Sign In
+                </Button>
+                <Button 
+                  onClick={() => navigate('/signup')} 
+                  data-testid="signup-link"
+                >
+                  Get Started <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </>
+            )}
         </div>
       </nav>
       
@@ -147,7 +158,7 @@ const Landing = () => {
                 <>
                   <Button 
                     size="lg" 
-                    onClick={() => navigate('/dashboard')} 
+                    onClick={() => navigate('/signup')} 
                     data-testid="cta-button"
                     style={{
                       fontSize: '17px',
