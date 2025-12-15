@@ -1,10 +1,21 @@
+import os
+import sys
+from pathlib import Path
+
+# Add the backend directory to Python path
+backend_path = Path(__file__).parent
+sys.path.insert(0, str(backend_path))
+sys.path.insert(0, str(backend_path.parent))
+
+# Also add the current directory
+sys.path.insert(0, os.getcwd())
+sys.path.insert(0, os.path.join(os.getcwd(), 'backend'))
+
 from fastapi import FastAPI, APIRouter, HTTPException, UploadFile, File, Depends, Response, Cookie, Header
 from fastapi.responses import StreamingResponse, FileResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
-import os
 import logging
-from pathlib import Path
 from datetime import datetime, timezone, timedelta
 import uuid
 import asyncio
