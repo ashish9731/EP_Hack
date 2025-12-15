@@ -141,72 +141,14 @@ async def login(request: LoginRequest, response: Response):
 @api_router.get("/auth/google-redirect")
 async def google_auth_redirect():
     redirect_url = f"{os.getenv('FRONTEND_URL', 'http://localhost:3000')}/dashboard"
-    auth_url = f"https://auth.emergentagent.com/?redirect={redirect_url}"
+    # Using Supabase auth instead of Emergent
+    auth_url = f"{os.getenv('SUPABASE_URL')}/auth/v1/authorize?provider=google&redirect_to={redirect_url}"
     return {"auth_url": auth_url}
 
 @api_router.get("/auth/session")
 async def exchange_session(session_id: str):
-    async with httpx.AsyncClient() as client:
-        response = await client.get(
-            "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data",
-            headers={"X-Session-ID": session_id}
-        )
-        
-        if response.status_code != 200:
-            raise HTTPException(status_code=401, detail="Invalid session")
-        
-        data = response.json()
-        
-        # Check if user exists in Supabase
-        try:
-            user_response = supabase.table("users").select("*").eq("email", data["email"]).execute()
-            
-            if user_response.data:
-                user_id = user_response.data[0]["id"]
-                # Update existing user
-                update_data = {
-                    "name": data.get("name", user_response.data[0].get("name", "")),
-                    "picture": data.get("picture", user_response.data[0].get("picture"))
-                }
-                supabase.table("users").update(update_data).eq("id", user_id).execute()
-            else:
-                # Create new user
-                user_id = f"user_{uuid.uuid4().hex[:12]}"
-                user_data = {
-                    "id": user_id,
-                    "email": data["email"],
-                    "name": data.get("name", ""),
-                    "picture": data.get("picture"),
-                    "created_at": datetime.now(timezone.utc).isoformat()
-                }
-                supabase.table("users").insert(user_data).execute()
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
-        
-        session_token = data.get("session_token") or await create_session_token(user_id)
-        
-        expires_at = datetime.now(timezone.utc) + timedelta(days=7)
-        session_data = {
-            "user_id": user_id,
-            "session_token": session_token,
-            "expires_at": expires_at.isoformat(),
-            "created_at": datetime.now(timezone.utc).isoformat()
-        }
-        
-        try:
-            # Upsert session data
-            supabase.table("user_sessions").upsert(session_data).execute()
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Failed to store session: {str(e)}")
-        
-        # Get user data
-        try:
-            user_response = supabase.table("users").select("*").eq("id", user_id).execute()
-            user = user_response.data[0] if user_response.data else None
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Failed to retrieve user: {str(e)}")
-        
-        return {"user": user, "session_token": session_token}
+    # Using Supabase session management instead of Emergent
+    raise HTTPException(status_code=400, detail="Endpoint not supported with Supabase auth")
 
 @api_router.get("/auth/me")
 async def get_me(session_token: Optional[str] = Cookie(None), authorization: Optional[str] = Header(None)):
