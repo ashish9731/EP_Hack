@@ -2,7 +2,7 @@ from fastapi import FastAPI, APIRouter, HTTPException, UploadFile, File, Depends
 from fastapi.responses import StreamingResponse, FileResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
-from motor.motor_asyncio import AsyncIOMotorClient
+# Removed MongoDB client import
 import os
 import logging
 from pathlib import Path
@@ -18,7 +18,7 @@ sys.path.append('/app/backend')
 from models.user import UserCreate, User, LoginRequest, SignupRequest, AuthResponse
 from models.video import JobStatus, VideoMetadata, EPReport
 from models.profile import ProfileCreateRequest, UserProfile
-from utils.auth import hash_password, verify_password, create_session_token, get_current_user
+from utils.supabase_auth import create_session_token, get_current_user, hash_password, verify_password
 from utils.gridfs_helper import save_video_to_gridfs, get_video_from_gridfs
 from services.video_processor import VideoProcessorService
 from routes.profile import create_profile_router
@@ -37,9 +37,9 @@ from services.video_retention import create_retention_router, VideoRetentionServ
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
+# Removed MongoDB URL initialization
+# Removed MongoDB client initialization
+# Removed MongoDB database initialization
 
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
