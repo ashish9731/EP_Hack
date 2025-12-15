@@ -97,12 +97,15 @@ async def signup(request: SignupRequest, response: Response):
         # Create our own session token for compatibility with existing frontend
         session_token = await create_session_token(user_data.id)
         
+        # Determine if we should use secure cookies (True in production, False in development)
+        is_production = not os.getenv("DEV_MODE", "false").lower() == "true"
+        
         response.set_cookie(
             key="session_token",
             value=session_token,
             httponly=True,
-            secure=True,
-            samesite="none",
+            secure=is_production,
+            samesite="lax" if not is_production else "none",
             path="/",
             max_age=7 * 24 * 60 * 60
         )
@@ -119,9 +122,15 @@ async def signup(request: SignupRequest, response: Response):
         return {"user": user, "session_token": session_token}
     except Exception as e:
         # Handle specific Supabase auth errors
-        if "already registered" in str(e).lower() or "email_taken" in str(e).lower():
+        error_message = str(e).lower()
+        if "already registered" in error_message or "email_taken" in error_message or "email already registered" in error_message:
             raise HTTPException(status_code=400, detail="Email already registered")
+        elif "invalid email" in error_message:
+            raise HTTPException(status_code=400, detail="Invalid email address")
+        elif "weak password" in error_message:
+            raise HTTPException(status_code=400, detail="Password is too weak. Please use a stronger password.")
         else:
+            print(f"Signup error: {str(e)}")  # Log the actual error for debugging
             raise HTTPException(status_code=500, detail=f"Signup error: {str(e)}")
 
 @api_router.post("/auth/login")
@@ -141,12 +150,15 @@ async def login(request: LoginRequest, response: Response):
         # Create our own session token for compatibility with existing frontend
         session_token = await create_session_token(user_data.id)
         
+        # Determine if we should use secure cookies (True in production, False in development)
+        is_production = not os.getenv("DEV_MODE", "false").lower() == "true"
+        
         response.set_cookie(
             key="session_token",
             value=session_token,
             httponly=True,
-            secure=True,
-            samesite="none",
+            secure=is_production,
+            samesite="lax" if not is_production else "none",
             path="/",
             max_age=7 * 24 * 60 * 60
         )
@@ -163,16 +175,26 @@ async def login(request: LoginRequest, response: Response):
         return {"user": user, "session_token": session_token}
     except Exception as e:
         # Handle specific Supabase auth errors
-        if "Invalid login credentials" in str(e):
+        error_message = str(e).lower()
+        if "invalid login credentials" in error_message or "invalid credentials" in error_message:
             raise HTTPException(status_code=401, detail="Invalid credentials")
+        elif "email not confirmed" in error_message:
+            raise HTTPException(status_code=401, detail="Please confirm your email address before signing in")
         else:
+            print(f"Login error: {str(e)}")  # Log the actual error for debugging
             raise HTTPException(status_code=500, detail=f"Authentication error: {str(e)}")
 
 @api_router.get("/auth/google-redirect")
 async def google_auth_redirect():
     redirect_url = f"{os.getenv('FRONTEND_URL', 'http://localhost:3000')}/dashboard"
     # Using Supabase auth instead of Emergent
-    auth_url = f"{os.getenv('SUPABASE_URL')}/auth/v1/authorize?provider=google&redirect_to={redirect_url}"
+    supabase_url = os.getenv('SUPABASE_URL')
+    if not supabase_url:
+        raise HTTPException(status_code=500, detail="SUPABASE_URL not configured")
+    
+    # Ensure the URL doesn't end with a slash
+    clean_supabase_url = supabase_url.rstrip('/')
+    auth_url = f"{clean_supabase_url}/auth/v1/authorize?provider=google&redirect_to={redirect_url}"
     return {"auth_url": auth_url}
 
 @api_router.get("/auth/me")
@@ -185,11 +207,20 @@ async def logout(response: Response, session_token: Optional[str] = Cookie(None)
     if session_token:
         try:
             get_supabase_client().table("user_sessions").delete().eq("session_token", session_token).execute()
-            response.delete_cookie("session_token", path="/")
         except Exception as e:
             # Log error but still clear cookie
             logging.error(f"Failed to delete session: {str(e)}")
-            response.delete_cookie("session_token", path="/")
+        
+        # Determine if we should use secure cookies (True in production, False in development)
+        is_production = not os.getenv("DEV_MODE", "false").lower() == "true"
+        
+        # Clear the cookie with the appropriate settings
+        response.delete_cookie(
+            "session_token",
+            path="/",
+            secure=is_production,
+            samesite="lax" if not is_production else "none"
+        )
     return {"message": "Logged out"}
 
 @api_router.post("/videos/upload")
@@ -359,9 +390,18 @@ app.include_router(create_sharing_router(get_supabase_client()))
 app.include_router(create_retention_router(get_supabase_client()))
 
 # CORS middleware
+# Get frontend URL from environment variable, fallback to localhost for development
+frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
+allowed_origins = [frontend_url]
+
+# Add Vercel deployment URLs for production
+if "VERCEL_URL" in os.environ:
+    vercel_url = f"https://{os.environ['VERCEL_URL']}"
+    allowed_origins.append(vercel_url)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
