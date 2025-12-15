@@ -1,7 +1,8 @@
 import axios from 'axios';
 import { getDeviceFingerprint } from './deviceFingerprint';
 
-const API_URL = process.env.REACT_APP_BACKEND_URL;
+// Dynamically determine backend URL based on current domain
+const API_URL = process.env.REACT_APP_BACKEND_URL || (typeof window !== 'undefined' ? window.location.origin : '');
 
 export const api = axios.create({
   baseURL: `${API_URL}/api`,
