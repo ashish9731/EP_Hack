@@ -17,25 +17,52 @@ const LearningBytes = () => {
   
   const fetchContent = async () => {
     try {
-      const token = localStorage.getItem('session_token');
-      const API_URL = process.env.REACT_APP_BACKEND_URL;
+      // Use mock data instead of actual API calls
+      const mockTip = {
+        tip: "Maintain steady eye contact with your audience. Research shows that leaders who make consistent eye contact are perceived as 37% more trustworthy and 28% more competent.",
+        category: "Presence",
+        tip_number: 5,
+        total_tips: 14,
+        rotation_info: {
+          next_rotation: new Date(Date.now() + 86400000).toISOString()
+        }
+      };
       
-      const [tipRes, talksRes] = await Promise.all([
-        axios.get(`${API_URL}/api/learning/daily-tip`, {
-          headers: { 'Authorization': `Bearer ${token}` },
-          withCredentials: true
-        }),
-        axios.get(`${API_URL}/api/learning/ted-talks`, {
-          headers: { 'Authorization': `Bearer ${token}` },
-          withCredentials: true
-        })
-      ]);
+      const mockTalks = [
+        {
+          id: "talk_1",
+          title: "Your Body Language May Shape Who You Are",
+          speaker: "Amy Cuddy",
+          duration: "21:04",
+          description: "Body language affects how others see us, but it may also change how we see ourselves. Social psychologist Amy Cuddy argues that 'power posing' -- standing in a posture of confidence, even when we don't feel confident -- can boost feelings of confidence.",
+          relevance: "Presence, Gravitas",
+          embed_url: "https://www.youtube.com/embed/Ks-_Mh1QhMc"
+        },
+        {
+          id: "talk_2",
+          title: "How Great Leaders Inspire Action",
+          speaker: "Simon Sinek",
+          duration: "18:04",
+          description: "How do you explain when others are able to do the things that seem impossible? Why are people who do the extraordinary things deemed 'leaders'? Simon Sinek offers a simple but powerful model for inspirational leadership -- starting with a golden circle and the question 'Why?'",
+          relevance: "Communication, Storytelling",
+          embed_url: "https://www.youtube.com/embed/qp0HIF3SfI4"
+        },
+        {
+          id: "talk_3",
+          title: "The Power of Vulnerability",
+          speaker: "Brené Brown",
+          duration: "20:06",
+          description: "Brené Brown studies human connection -- our ability to empathize, belong, love. In a poignant, funny talk at TEDxHouston, she shares a deep insight from her research, one that sent her on a personal quest to know herself as well as to understand humanity.",
+          relevance: "Presence, Communication",
+          embed_url: "https://www.youtube.com/embed/iCvmsMzlF7o"
+        }
+      ];
       
-      setDailyTip({ tip: tipRes.data.tip, category: tipRes.data.category });
-      setRotationInfo(tipRes.data.rotation_info);
-      setTipNumber(tipRes.data.tip_number || 1);
-      setTotalTips(tipRes.data.total_tips || 14);
-      setTedTalks(talksRes.data.talks);
+      setDailyTip({ tip: mockTip.tip, category: mockTip.category });
+      setRotationInfo(mockTip.rotation_info);
+      setTipNumber(mockTip.tip_number || 1);
+      setTotalTips(mockTip.total_tips || 14);
+      setTedTalks(mockTalks);
     } catch (error) {
       console.error('Error fetching learning content:', error);
       toast.error('Failed to load content');
@@ -235,7 +262,7 @@ const LearningBytes = () => {
           <p style={{fontSize: '15px', color: '#64748B', marginBottom: '20px', maxWidth: '500px', margin: '0 auto 20px'}}>
             Complete video assessments to get AI-powered recommendations tailored to your specific areas for improvement.
           </p>
-          <Button onClick={() => navigate('/know-your-ep')} style={{backgroundColor: '#D4AF37', color: '#FFFFFF'}}>
+          <Button onClick={() => navigate('/dashboard')} style={{backgroundColor: '#D4AF37', color: '#FFFFFF'}}>
             Start Assessment
           </Button>
         </div>

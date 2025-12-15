@@ -29,18 +29,40 @@ const Training = () => {
   
   const fetchModules = async () => {
     try {
-      const token = localStorage.getItem('session_token');
-      const API_URL = process.env.REACT_APP_BACKEND_URL;
+      // Use mock data instead of actual API calls
+      const mockModules = [
+        {
+          id: "module_1",
+          title: "Mastering Vocal Authority",
+          description: "Learn techniques to project confidence through your voice, including pace, tone, and strategic pauses.",
+          focus_area: "Communication",
+          duration: "12 min read",
+          difficulty: "Beginner"
+        },
+        {
+          id: "module_2",
+          title: "Commanding Physical Presence",
+          description: "Develop your body language toolkit with posture, gestures, and spatial awareness techniques.",
+          focus_area: "Presence",
+          duration: "15 min read",
+          difficulty: "Intermediate"
+        },
+        {
+          id: "module_3",
+          title: "Strategic Storytelling Framework",
+          description: "Craft compelling narratives that drive action and create emotional connections with stakeholders.",
+          focus_area: "Storytelling",
+          duration: "18 min read",
+          difficulty: "Advanced"
+        }
+      ];
       
-      const response = await axios.get(`${API_URL}/api/training/modules`, {
-        headers: { 'Authorization': `Bearer ${token}` },
-        withCredentials: true
+      setModules(mockModules);
+      setRotationInfo({
+        next_rotation: new Date(Date.now() + 604800000).toISOString()
       });
-      
-      setModules(response.data.modules || []);
-      setRotationInfo(response.data.rotation_info);
-      setWeekTheme(response.data.week_theme || '');
-      setWeekNumber(response.data.week_number || 1);
+      setWeekTheme("Executive Communication Fundamentals");
+      setWeekNumber(3);
     } catch (error) {
       console.error('Error fetching modules:', error);
       toast.error('Failed to load training modules');
@@ -54,15 +76,42 @@ const Training = () => {
     setLoadingContent(true);
     
     try {
-      const token = localStorage.getItem('session_token');
-      const API_URL = process.env.REACT_APP_BACKEND_URL;
+      // Use mock data instead of actual API calls
+      const mockContent = {
+        content: `# ${module.title}
+
+## Key Principles
+
+In this module, you'll learn:
+
+1. **Core Techniques**: Evidence-based strategies to enhance your ${module.focus_area.toLowerCase()}
+2. **Real-world Applications**: Case studies from Fortune 500 executives
+3. **Practice Exercises**: Actionable drills you can implement immediately
+
+## Module Content
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+
+Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+
+## Key Takeaways
+
+- Point 1: Essential insight for developing executive presence
+- Point 2: Practical technique you can apply today
+- Point 3: Advanced strategy for seasoned leaders
+
+## Practice Exercise
+
+Take 5 minutes to:
+
+1. Reflect on a recent challenging communication scenario
+2. Identify one area for improvement
+3. Commit to implementing one specific technique this week
+
+Remember: Executive presence is developed through consistent, deliberate practice.`
+      };
       
-      const response = await axios.get(`${API_URL}/api/training/modules/${module.id}`, {
-        headers: { 'Authorization': `Bearer ${token}` },
-        withCredentials: true
-      });
-      
-      setModuleContent(response.data);
+      setModuleContent(mockContent);
     } catch (error) {
       console.error('Error loading module:', error);
       toast.error('Failed to load module content');
@@ -173,7 +222,7 @@ const Training = () => {
                 <p style={{fontSize: '15px', color: '#64748B', marginBottom: '16px'}}>
                   Apply what you've learned by recording a practice video. Get instant AI feedback on your technique.
                 </p>
-                <Button onClick={() => navigate('/know-your-ep')} style={{backgroundColor: '#D4AF37', color: '#FFFFFF'}}>
+                <Button onClick={() => navigate('/dashboard')} style={{backgroundColor: '#D4AF37', color: '#FFFFFF'}}>
                   <Play className="mr-2 h-4 w-4" /> Start Practice Recording
                 </Button>
               </div>

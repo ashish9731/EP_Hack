@@ -38,17 +38,43 @@ const Simulator = () => {
   
   const fetchScenarios = async () => {
     try {
-      const token = localStorage.getItem('session_token');
-      const API_URL = process.env.REACT_APP_BACKEND_URL;
+      // Use mock data instead of actual API calls
+      const mockScenarios = [
+        {
+          id: "scenario_1",
+          title: "Board Presentation Challenge",
+          situation: "You're presenting a critical quarterly update to the board. Several members seem skeptical about your division's performance.",
+          prompt: "Address concerns diplomatically while demonstrating confidence in your strategy. Show both accountability and vision.",
+          difficulty: "High",
+          duration: "3 minutes",
+          focus: ["Gravitas", "Communication"]
+        },
+        {
+          id: "scenario_2",
+          title: "Difficult Stakeholder Conversation",
+          situation: "A key client is upset about a project delay and is threatening to pull their business.",
+          prompt: "Acknowledge their concerns, explain the situation without making excuses, and outline concrete next steps.",
+          difficulty: "Medium",
+          duration: "2 minutes",
+          focus: ["Communication", "Presence"]
+        },
+        {
+          id: "scenario_3",
+          title: "Leading Through Uncertainty",
+          situation: "Your team is anxious about upcoming organizational changes that haven't been officially announced yet.",
+          prompt: "Provide reassurance without sharing confidential information. Demonstrate calm authority and empathy.",
+          difficulty: "Low",
+          duration: "90 seconds",
+          focus: ["Gravitas", "Presence"]
+        }
+      ];
       
-      const response = await axios.get(`${API_URL}/api/simulator/scenarios`, {
-        headers: { 'Authorization': `Bearer ${token}` },
-        withCredentials: true
+      setScenarios(mockScenarios);
+      setRotationInfo({
+        next_rotation: new Date(Date.now() + 86400000).toISOString(),
+        pool_size: 12
       });
-      
-      setScenarios(response.data.scenarios || []);
-      setRotationInfo(response.data.rotation_info);
-      setPoolName(response.data.pool_name);
+      setPoolName("Executive Crisis Scenarios");
     } catch (error) {
       console.error('Error fetching scenarios:', error);
       toast.error('Failed to load scenarios');
