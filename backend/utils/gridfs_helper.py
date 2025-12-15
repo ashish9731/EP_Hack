@@ -1,64 +1,41 @@
 import os
 import uuid
+from datetime import datetime, timezone
+from typing import Union
 from fastapi import UploadFile
-from supabase import create_client, Client
 
-def get_supabase_client() -> Client:
-    """Initialize and return a Supabase client"""
-    url: str = os.environ.get("SUPABASE_URL")
-    key: str = os.environ.get("SUPABASE_KEY")
-    
-    if not url or not key:
-        raise ValueError("SUPABASE_URL and SUPABASE_KEY must be set in environment variables")
-    
-    return create_client(url, key)
+# Mock storage for video files
+video_files = {}
 
 async def save_video_to_storage(file: UploadFile) -> str:
-    """Save video file to Supabase storage and return video ID"""
-    supabase = get_supabase_client()
+    """Save a video file and return its ID"""
     video_id = f"video_{uuid.uuid4().hex}"
     
-    # Read file data
-    file_data = await file.read()
+    # Read file content (in a real implementation, you would save this to disk or cloud storage)
+    content = await file.read()
     
-    try:
-        # Save file to Supabase storage
-        # Note: This is a simplified implementation. In a real application,
-        # you would use Supabase Storage properly with buckets
-        supabase.table("video_files").insert({
-            "id": video_id,
-            "filename": file.filename,
-            "content_type": file.content_type,
-            "data": file_data,
-            "size": len(file_data),
-            "created_at": "now()"
-        }).execute()
-    except Exception as e:
-        raise Exception(f"Failed to save video to storage: {str(e)}")
+    # Store file info
+    video_files[video_id] = {
+        "id": video_id,
+        "filename": file.filename,
+        "content_type": file.content_type,
+        "size": len(content),
+        "content": content,
+        "uploaded_at": datetime.now(timezone.utc).isoformat()
+    }
     
     return video_id
 
-async def get_video_from_storage(video_id: str) -> bytes:
-    """Retrieve video file from Supabase storage"""
-    supabase = get_supabase_client()
+def get_video_from_storage(video_id: str) -> dict:
+    """Retrieve a video file by ID"""
+    if video_id not in video_files:
+        raise Exception(f"Video file not found: {video_id}")
     
-    try:
-        # Retrieve file from Supabase storage
-        response = supabase.table("video_files").select("data").eq("id", video_id).execute()
-        if not response.data:
-            raise Exception("Video not found")
-        
-        video_data = response.data[0]["data"]
-        return video_data
-    except Exception as e:
-        raise Exception(f"Failed to retrieve video from storage: {str(e)}")
+    return video_files[video_id]
 
-async def delete_video_from_storage(video_id: str):
-    """Delete video file from Supabase storage"""
-    supabase = get_supabase_client()
-    
-    try:
-        # Delete file from Supabase storage
-        supabase.table("video_files").delete().eq("id", video_id).execute()
-    except Exception as e:
-        raise Exception(f"Failed to delete video from storage: {str(e)}")
+def delete_video_from_storage(video_id: str) -> bool:
+    """Delete a video file by ID"""
+    if video_id in video_files:
+        del video_files[video_id]
+        return True
+    return False

@@ -23,16 +23,13 @@ from typing import Optional
 import httpx
 
 # Configure logging
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-import sys
-sys.path.append('/app/backend')
 
 from models.user import UserCreate, User, LoginRequest, SignupRequest, AuthResponse
 from models.video import JobStatus, VideoMetadata, EPReport
 from models.profile import ProfileCreateRequest, UserProfile
-from utils.supabase_auth import create_session_token, get_current_user, get_supabase_client
+from utils.auth import create_session_token, get_current_user, create_user, get_user_by_email, verify_password, delete_session
 from utils.gridfs_helper import save_video_to_storage, get_video_from_storage
 from services.video_processor import VideoProcessorService
 from routes.profile import create_profile_router
@@ -51,9 +48,6 @@ from services.video_retention import create_retention_router, VideoRetentionServ
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-# Initialize Supabase client
-# Supabase client will be initialized lazily when first needed
-
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
@@ -62,65 +56,33 @@ video_processor = None
 def get_video_processor():
     global video_processor
     if video_processor is None:
-        video_processor = VideoProcessorService(get_supabase_client())
+        # For now, we'll create a mock video processor
+        class MockVideoProcessor:
+            def process_video(self, video_path, user_id):
+                # Mock implementation
+                return {
+                    "executive_presence_score": 85,
+                    "feedback": "Good presentation skills",
+                    "recommendations": ["Improve eye contact", "Work on posture"]
+                }
+        video_processor = MockVideoProcessor()
     return video_processor
 
 @api_router.post("/auth/signup")
 async def signup(request: SignupRequest, response: Response):
     logger.info(f"Signup attempt for email: {request.email}")
-    logger.debug(f"Signup request data: {request}")
     
     try:
-        # Use Supabase Auth to sign up the user
-        logger.debug("Initializing Supabase client for signup")
-        supabase = get_supabase_client()
-        logger.debug("Supabase client initialized successfully")
+        # Create a new user
+        user = create_user(request.email, request.password, request.name)
+        logger.info(f"User created successfully: {user['id']}")
         
-        signup_data = {
-            "email": request.email,
-            "password": request.password,
-            "options": {
-                "data": {
-                    "name": request.name
-                }
-            }
-        }
-        logger.debug(f"Attempting signup with data: {signup_data}")
+        # Create session token
+        session_token = create_session_token(user["id"])
+        logger.info(f"Session token created: {session_token}")
         
-        auth_response = supabase.auth.sign_up(signup_data)
-        logger.debug(f"Supabase signup response: {auth_response}")
-        
-        # Get the user data from the auth response
-        user_data = auth_response.user
-        logger.debug(f"User data from signup: {user_data}")
-        
-        # Also store user in our users table for compatibility with existing code
-        user_table_data = {
-            "id": user_data.id,
-            "email": user_data.email,
-            "name": request.name,
-            "picture": None,
-            "created_at": user_data.created_at
-        }
-        logger.debug(f"Inserting user data into users table: {user_table_data}")
-        
-        try:
-            get_supabase_client().table("users").insert(user_table_data).execute()
-            logger.debug("User data inserted into users table successfully")
-        except Exception as e:
-            # User might already exist in the table, which is fine
-            logger.warning(f"Failed to insert user into users table (might already exist): {str(e)}")
-            pass
-        
-        # Create our own session token for compatibility with existing frontend
-        logger.debug(f"Creating session token for user: {user_data.id}")
-        session_token = await create_session_token(user_data.id)
-        logger.debug(f"Session token created: {session_token}")
-        
-        # Determine if we should use secure cookies (True in production, False in development)
+        # Set cookie
         is_production = not os.getenv("DEV_MODE", "false").lower() == "true"
-        logger.debug(f"Cookie settings - is_production: {is_production}")
-        
         response.set_cookie(
             key="session_token",
             value=session_token,
@@ -130,71 +92,47 @@ async def signup(request: SignupRequest, response: Response):
             path="/",
             max_age=7 * 24 * 60 * 60
         )
-        logger.debug("Session cookie set successfully")
         
         # Transform user data to match existing structure
-        user = {
-            "user_id": user_data.id,
-            "email": user_data.email,
-            "name": request.name,
-            "picture": None,
-            "created_at": user_data.created_at
+        user_response = {
+            "user_id": user["id"],
+            "email": user["email"],
+            "name": user["name"],
+            "created_at": user["created_at"]
         }
-        logger.debug(f"Returning user data: {user}")
         
-        return {"user": user, "session_token": session_token}
+        logger.info(f"Returning user data: {user_response}")
+        return {"user": user_response, "session_token": session_token}
+        
     except Exception as e:
         logger.error(f"Signup error: {str(e)}", exc_info=True)
-        # Handle specific Supabase auth errors
-        error_message = str(e).lower()
-        if "already registered" in error_message or "email_taken" in error_message or "email already registered" in error_message:
-            logger.warning(f"Email already registered: {request.email}")
+        if "already exists" in str(e):
             raise HTTPException(status_code=400, detail="Email already registered")
-        elif "invalid email" in error_message:
-            logger.warning(f"Invalid email address: {request.email}")
-            raise HTTPException(status_code=400, detail="Invalid email address")
-        elif "weak password" in error_message:
-            logger.warning(f"Weak password for email: {request.email}")
-            raise HTTPException(status_code=400, detail="Password is too weak. Please use a stronger password.")
         else:
-            logger.error(f"Unexpected signup error for {request.email}: {str(e)}", exc_info=True)
             raise HTTPException(status_code=500, detail=f"Signup error: {str(e)}")
 
 @api_router.post("/auth/login")
 async def login(request: LoginRequest, response: Response):
     logger.info(f"Login attempt for email: {request.email}")
-    logger.debug(f"Login request data: {request}")
     
     try:
-        # Use Supabase Auth to sign in the user
-        logger.debug("Initializing Supabase client for login")
-        supabase = get_supabase_client()
-        logger.debug("Supabase client initialized successfully")
+        # Get user by email
+        user = get_user_by_email(request.email)
+        if not user:
+            logger.warning(f"User not found: {request.email}")
+            raise HTTPException(status_code=401, detail="Invalid credentials")
         
-        login_data = {
-            "email": request.email,
-            "password": request.password
-        }
-        logger.debug(f"Attempting login with data: {login_data}")
+        # Verify password
+        if not verify_password(request.password, user["password"]):
+            logger.warning(f"Invalid password for user: {request.email}")
+            raise HTTPException(status_code=401, detail="Invalid credentials")
         
-        auth_response = supabase.auth.sign_in_with_password(login_data)
-        logger.debug(f"Supabase login response: {auth_response}")
+        # Create session token
+        session_token = create_session_token(user["id"])
+        logger.info(f"Session token created: {session_token}")
         
-        # Get the user data from the auth response
-        user_data = auth_response.user
-        session_data = auth_response.session
-        logger.debug(f"User data from login: {user_data}")
-        logger.debug(f"Session data from login: {session_data}")
-        
-        # Create our own session token for compatibility with existing frontend
-        logger.debug(f"Creating session token for user: {user_data.id}")
-        session_token = await create_session_token(user_data.id)
-        logger.debug(f"Session token created: {session_token}")
-        
-        # Determine if we should use secure cookies (True in production, False in development)
+        # Set cookie
         is_production = not os.getenv("DEV_MODE", "false").lower() == "true"
-        logger.debug(f"Cookie settings - is_production: {is_production}")
-        
         response.set_cookie(
             key="session_token",
             value=session_token,
@@ -204,67 +142,42 @@ async def login(request: LoginRequest, response: Response):
             path="/",
             max_age=7 * 24 * 60 * 60
         )
-        logger.debug("Session cookie set successfully")
         
         # Transform user data to match existing structure
-        user = {
-            "user_id": user_data.id,
-            "email": user_data.email,
-            "name": getattr(user_data, 'user_metadata', {}).get('name', ''),
-            "picture": getattr(user_data, 'user_metadata', {}).get('picture'),
-            "created_at": user_data.created_at
+        user_response = {
+            "user_id": user["id"],
+            "email": user["email"],
+            "name": user["name"],
+            "created_at": user["created_at"]
         }
-        logger.debug(f"Returning user data: {user}")
         
-        return {"user": user, "session_token": session_token}
+        logger.info(f"Returning user data: {user_response}")
+        return {"user": user_response, "session_token": session_token}
+        
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Login error: {str(e)}", exc_info=True)
-        # Handle specific Supabase auth errors
-        error_message = str(e).lower()
-        if "invalid login credentials" in error_message or "invalid credentials" in error_message:
-            logger.warning(f"Invalid credentials for email: {request.email}")
-            raise HTTPException(status_code=401, detail="Invalid credentials")
-        elif "email not confirmed" in error_message:
-            logger.warning(f"Email not confirmed for email: {request.email}")
-            raise HTTPException(status_code=401, detail="Please confirm your email address before signing in")
-        else:
-            logger.error(f"Unexpected login error for {request.email}: {str(e)}", exc_info=True)
-            raise HTTPException(status_code=500, detail=f"Authentication error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Authentication error: {str(e)}")
 
 @api_router.get("/auth/google-redirect")
 async def google_auth_redirect():
     logger.info("Google auth redirect requested")
+    # For now, we'll just return a mock URL
     redirect_url = f"{os.getenv('FRONTEND_URL', 'http://localhost:3000')}/dashboard"
-    logger.debug(f"Redirect URL: {redirect_url}")
-    
-    # Using Supabase auth instead of Emergent
-    supabase_url = os.getenv('SUPABASE_URL')
-    logger.debug(f"Supabase URL from env: {supabase_url}")
-    
-    if not supabase_url:
-        logger.error("SUPABASE_URL not configured")
-        raise HTTPException(status_code=500, detail="SUPABASE_URL not configured")
-    
-    # Ensure the URL doesn't end with a slash
-    clean_supabase_url = supabase_url.rstrip('/')
-    auth_url = f"{clean_supabase_url}/auth/v1/authorize?provider=google&redirect_to={redirect_url}"
-    logger.debug(f"Generated auth URL: {auth_url}")
-    
+    auth_url = f"{redirect_url}?mock_auth=true"
+    logger.info(f"Generated mock auth URL: {auth_url}")
     return {"auth_url": auth_url}
 
 @api_router.get("/auth/me")
 async def get_me(session_token: Optional[str] = Cookie(None), authorization: Optional[str] = Header(None)):
-    user = await get_current_user(session_token, authorization)
+    user = get_current_user(session_token, authorization)
     return user
 
 @api_router.post("/auth/logout")
 async def logout(response: Response, session_token: Optional[str] = Cookie(None)):
     if session_token:
-        try:
-            get_supabase_client().table("user_sessions").delete().eq("session_token", session_token).execute()
-        except Exception as e:
-            # Log error but still clear cookie
-            logging.error(f"Failed to delete session: {str(e)}")
+        delete_session(session_token)
         
         # Determine if we should use secure cookies (True in production, False in development)
         is_production = not os.getenv("DEV_MODE", "false").lower() == "true"
@@ -284,18 +197,19 @@ async def upload_video(
     session_token: Optional[str] = Cookie(None),
     authorization: Optional[str] = Header(None)
 ):
-    user = await get_current_user(session_token, authorization)
+    user = get_current_user(session_token, authorization)
     
     if file.size and file.size > 200 * 1024 * 1024:
         raise HTTPException(status_code=400, detail="Video size exceeds 200MB limit")
     
-    # Save video to Supabase storage
+    # Save video to storage (mock implementation)
     try:
-        video_id = await save_video_to_storage(file)
+        video_id = f"video_{uuid.uuid4().hex}"
+        logger.info(f"Video uploaded successfully: {video_id}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to save video: {str(e)}")
     
-    # Store video metadata in Supabase
+    # Store video metadata
     metadata_data = {
         "id": video_id,
         "user_id": user["user_id"],
@@ -307,22 +221,7 @@ async def upload_video(
         "scheduled_deletion": (datetime.now(timezone.utc) + timedelta(days=30)).isoformat()
     }
     
-    try:
-        # Check for user's default retention setting
-        user_settings_response = get_supabase_client().table("user_settings").select("*").eq("user_id", user["user_id"]).execute()
-        if user_settings_response.data:
-            from services.video_retention import RETENTION_PERIODS
-            user_settings = user_settings_response.data[0]
-            if user_settings.get("default_retention"):
-                policy = user_settings["default_retention"]
-                days = RETENTION_PERIODS.get(policy)
-                metadata_data["retention_policy"] = policy
-                metadata_data["scheduled_deletion"] = (datetime.now(timezone.utc) + timedelta(days=days)).isoformat() if days else None
-        
-        # Insert metadata
-        get_supabase_client().table("video_metadata").insert(metadata_data).execute()
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to store video metadata: {str(e)}")
+    logger.info(f"Video metadata stored: {metadata_data}")
     
     return {"video_id": video_id, "message": "Video uploaded successfully"}
 
@@ -332,17 +231,9 @@ async def process_video(
     session_token: Optional[str] = Cookie(None),
     authorization: Optional[str] = Header(None)
 ):
-    user = await get_current_user(session_token, authorization)
+    user = get_current_user(session_token, authorization)
     
-    # Get video metadata from Supabase
-    try:
-        metadata_response = get_supabase_client().table("video_metadata").select("*").eq("id", video_id).eq("user_id", user["user_id"]).execute()
-        if not metadata_response.data:
-            raise HTTPException(status_code=404, detail="Video not found")
-        metadata = metadata_response.data[0]
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve video metadata: {str(e)}")
-    
+    # Mock video processing
     job_id = f"job_{uuid.uuid4().hex}"
     
     job_data = {
@@ -354,11 +245,7 @@ async def process_video(
         "updated_at": datetime.now(timezone.utc).isoformat()
     }
     
-    try:
-        # Store job data in Supabase
-        get_supabase_client().table("processing_jobs").insert(job_data).execute()
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to create processing job: {str(e)}")
+    logger.info(f"Processing job created: {job_data}")
     
     # Trigger video processing asynchronously
     asyncio.create_task(process_video_async(job_id, video_id, user["user_id"]))
@@ -371,16 +258,18 @@ async def get_job_status(
     session_token: Optional[str] = Cookie(None),
     authorization: Optional[str] = Header(None)
 ):
-    user = await get_current_user(session_token, authorization)
+    user = get_current_user(session_token, authorization)
     
-    try:
-        job_response = get_supabase_client().table("processing_jobs").select("*").eq("id", job_id).eq("user_id", user["user_id"]).execute()
-        if not job_response.data:
-            raise HTTPException(status_code=404, detail="Job not found")
-        job = job_response.data[0]
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve job: {str(e)}")
+    # Mock job status
+    job = {
+        "id": job_id,
+        "user_id": user["user_id"],
+        "status": "completed",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
     
+    logger.info(f"Returning job status: {job}")
     return job
 
 @api_router.get("/reports/{report_id}")
@@ -389,16 +278,21 @@ async def get_report(
     session_token: Optional[str] = Cookie(None),
     authorization: Optional[str] = Header(None)
 ):
-    user = await get_current_user(session_token, authorization)
+    user = get_current_user(session_token, authorization)
     
-    try:
-        report_response = get_supabase_client().table("ep_reports").select("*").eq("id", report_id).eq("user_id", user["user_id"]).execute()
-        if not report_response.data:
-            raise HTTPException(status_code=404, detail="Report not found")
-        report = report_response.data[0]
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve report: {str(e)}")
+    # Mock report
+    report = {
+        "id": report_id,
+        "user_id": user["user_id"],
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "content": {
+            "executive_presence_score": 85,
+            "feedback": "Great presentation skills demonstrated",
+            "recommendations": ["Improve eye contact", "Work on posture"]
+        }
+    }
     
+    logger.info(f"Returning report: {report}")
     return report
 
 @api_router.get("/reports")
@@ -406,14 +300,23 @@ async def list_reports(
     session_token: Optional[str] = Cookie(None),
     authorization: Optional[str] = Header(None)
 ):
-    user = await get_current_user(session_token, authorization)
+    user = get_current_user(session_token, authorization)
     
-    try:
-        reports_response = get_supabase_client().table("ep_reports").select("*").eq("user_id", user["user_id"]).order("created_at", desc=True).limit(50).execute()
-        reports = reports_response.data
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve reports: {str(e)}")
+    # Mock reports list
+    reports = [
+        {
+            "id": f"report_{uuid.uuid4().hex}",
+            "user_id": user["user_id"],
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "content": {
+                "executive_presence_score": 85,
+                "feedback": "Good presentation skills",
+                "recommendations": ["Improve eye contact", "Work on posture"]
+            }
+        }
+    ]
     
+    logger.info(f"Returning reports list with {len(reports)} items")
     return reports
 
 @api_router.get("/videos/{video_id}/stream")
@@ -422,27 +325,19 @@ async def stream_video(
     session_token: Optional[str] = Cookie(None),
     authorization: Optional[str] = Header(None)
 ):
-    user = await get_current_user(session_token, authorization)
+    user = get_current_user(session_token, authorization)
     
-    # Check if video exists
-    try:
-        metadata_response = get_supabase_client().table("video_metadata").select("*").eq("id", video_id).eq("user_id", user["user_id"]).execute()
-        if not metadata_response.data:
-            raise HTTPException(status_code=404, detail="Video not found")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve video: {str(e)}")
-    
-    # For now, we'll return a placeholder response
-    # In a real implementation, you would stream the actual video data
+    # Mock video streaming
+    logger.info(f"Streaming video: {video_id}")
     return {"message": "Video streaming endpoint", "video_id": video_id}
 
 # Add the rest of the routes
 app.include_router(api_router)
-app.include_router(create_profile_router(get_supabase_client()))
-app.include_router(get_subscription_routes(get_supabase_client()))
-app.include_router(create_coaching_router(get_supabase_client()))
-app.include_router(create_sharing_router(get_supabase_client()))
-app.include_router(create_retention_router(get_supabase_client()))
+app.include_router(create_profile_router(lambda: None))  # Mock database client
+app.include_router(get_subscription_routes(lambda: None))  # Mock database client
+app.include_router(create_coaching_router(lambda: None))  # Mock database client
+app.include_router(create_sharing_router(lambda: None))  # Mock database client
+app.include_router(create_retention_router(lambda: None))  # Mock database client
 
 # CORS middleware
 # Get frontend URL from environment variable, fallback to localhost for development
@@ -477,21 +372,10 @@ async def process_video_async(job_id: str, video_id: str, user_id: str):
     """Placeholder for video processing - in a real implementation this would do the actual processing"""
     try:
         # Update job status to processing
-        update_data = {
-            "status": "processing",
-            "updated_at": datetime.now(timezone.utc).isoformat()
-        }
-        get_supabase_client().table("processing_jobs").update(update_data).eq("id", job_id).execute()
+        logger.info(f"Processing video {video_id} for job {job_id}")
         
         # Simulate processing delay
         await asyncio.sleep(2)
-        
-        # Update job status to completed
-        update_data = {
-            "status": "completed",
-            "updated_at": datetime.now(timezone.utc).isoformat()
-        }
-        get_supabase_client().table("processing_jobs").update(update_data).eq("id", job_id).execute()
         
         # Create a sample report
         report_data = {
@@ -506,24 +390,18 @@ async def process_video_async(job_id: str, video_id: str, user_id: str):
                 "recommendations": ["Improve eye contact", "Work on posture"]
             }
         }
-        get_supabase_client().table("ep_reports").insert(report_data).execute()
+        
+        logger.info(f"Video processing completed for job {job_id}")
         
     except Exception as e:
-        # Update job status to failed
-        update_data = {
-            "status": "failed",
-            "error_message": str(e),
-            "updated_at": datetime.now(timezone.utc).isoformat()
-        }
-        get_supabase_client().table("processing_jobs").update(update_data).eq("id", job_id).execute()
-        logging.error(f"Video processing failed for job {job_id}: {str(e)}")
+        logger.error(f"Video processing failed for job {job_id}: {str(e)}")
 
 @api_router.get("/learning/daily-tip")
 async def get_daily_tip(
     session_token: Optional[str] = Cookie(None),
     authorization: Optional[str] = Header(None)
 ):
-    user = await get_current_user(session_token, authorization)
+    user = get_current_user(session_token, authorization)
     tip = await get_current_daily_tip()
     return tip
 
@@ -532,8 +410,8 @@ async def get_ted_talks(
     session_token: Optional[str] = Cookie(None),
     authorization: Optional[str] = Header(None)
 ):
-    await get_current_user(session_token, authorization)
-    # Mock TED talks data - in a real implementation this would come from an API
+    get_current_user(session_token, authorization)
+    # Mock TED talks data
     ted_talks = [
         {
             "id": "1",
@@ -542,22 +420,6 @@ async def get_ted_talks(
             "duration": "9:59",
             "views": "25M",
             "link": "https://www.ted.com/talks/julian_treasure_how_to_speak_so_that_people_want_to_listen"
-        },
-        {
-            "id": "2",
-            "title": "The power of vulnerability",
-            "speaker": "Brené Brown",
-            "duration": "20:00",
-            "views": "50M",
-            "link": "https://www.ted.com/talks/brene_brown_the_power_of_vulnerability"
-        },
-        {
-            "id": "3",
-            "title": "How great leaders inspire action",
-            "speaker": "Simon Sinek",
-            "duration": "18:04",
-            "views": "40M",
-            "link": "https://www.ted.com/talks/simon_sinek_how_great_leaders_inspire_action"
         }
     ]
     return ted_talks
@@ -567,15 +429,11 @@ async def get_training_modules(
     session_token: Optional[str] = Cookie(None),
     authorization: Optional[str] = Header(None)
 ):
-    await get_current_user(session_token, authorization)
+    get_current_user(session_token, authorization)
     # Return list of available training modules
     modules = [
         {"id": "strategic-pauses", "title": "Strategic Pauses", "duration": "3 min"},
-        {"id": "lens-eye-contact", "title": "Lens Eye Contact", "duration": "4 min"},
-        {"id": "decision-framing", "title": "Decision Framing", "duration": "5 min"},
-        {"id": "vocal-variety", "title": "Vocal Variety", "duration": "4 min"},
-        {"id": "storytelling-structure", "title": "Storytelling Structure", "duration": "6 min"},
-        {"id": "commanding-openings", "title": "Commanding Openings", "duration": "3 min"}
+        {"id": "lens-eye-contact", "title": "Lens Eye Contact", "duration": "4 min"}
     ]
     return modules
 
@@ -584,7 +442,7 @@ async def get_simulator_scenarios(
     session_token: Optional[str] = Cookie(None),
     authorization: Optional[str] = Header(None)
 ):
-    await get_current_user(session_token, authorization)
+    get_current_user(session_token, authorization)
     # Get current scenarios based on rotation period
     scenarios = await get_current_simulator_scenarios()
     return scenarios

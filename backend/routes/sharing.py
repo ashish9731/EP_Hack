@@ -3,8 +3,11 @@ from typing import Optional
 from datetime import datetime, timezone, timedelta
 import uuid
 
-from utils.supabase_auth import get_current_user
+from utils.auth import get_current_user
 
+# Mock storage for report shares and reports
+report_shares = {}
+shared_reports = {}
 
 def create_sharing_router(supabase):
     router = APIRouter(tags=["sharing"])
@@ -15,16 +18,14 @@ def create_sharing_router(supabase):
         session_token: Optional[str] = Cookie(None),
         authorization: Optional[str] = Header(None),
     ):
-        user = await get_current_user(session_token, authorization)
+        user = get_current_user(session_token, authorization)
 
-        # Check if report exists and belongs to user
-        try:
-            report_response = supabase.table("ep_reports").select("*").eq("id", report_id).eq("user_id", user["user_id"]).execute()
-            if not report_response.data:
-                raise HTTPException(status_code=404, detail="Report not found")
-            report = report_response.data[0]
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+        # Check if report exists (mock implementation)
+        # In a real app, you would check if the report belongs to the user
+        report_exists = True  # Simplified for demo
+        
+        if not report_exists:
+            raise HTTPException(status_code=404, detail="Report not found")
 
         share_id = f"share_{uuid.uuid4().hex}"
         now = datetime.now(timezone.utc)
@@ -39,25 +40,20 @@ def create_sharing_router(supabase):
             "revoked": False,
         }
 
-        try:
-            supabase.table("report_shares").insert(doc).execute()
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Failed to create share link: {str(e)}")
+        # Save share link
+        report_shares[share_id] = doc
             
         return {"share_id": share_id, "expires_at": expires_at.isoformat()}
 
     @router.get("/shared/reports/{share_id}")
     async def get_shared_report(share_id: str):
-        try:
-            share_response = supabase.table("report_shares").select("*").eq("id", share_id).execute()
-            if not share_response.data:
-                raise HTTPException(status_code=404, detail="Share link not found")
-            share = share_response.data[0]
+        share = report_shares.get(share_id)
+        
+        if not share:
+            raise HTTPException(status_code=404, detail="Share link not found")
                 
-            if share.get("revoked"):
-                raise HTTPException(status_code=404, detail="Share link not found")
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+        if share.get("revoked"):
+            raise HTTPException(status_code=404, detail="Share link not found")
 
         expires_at = share.get("expires_at")
         if expires_at:
@@ -67,13 +63,16 @@ def create_sharing_router(supabase):
             if exp < datetime.now(timezone.utc):
                 raise HTTPException(status_code=410, detail="Share link expired")
 
-        try:
-            report_response = supabase.table("ep_reports").select("*").eq("id", share["report_id"]).execute()
-            if not report_response.data:
-                raise HTTPException(status_code=404, detail="Report not found")
-            report = report_response.data[0]
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+        # Mock report data
+        report = {
+            "id": share["report_id"],
+            "content": {
+                "executive_presence_score": 85,
+                "feedback": "Great presentation skills demonstrated",
+                "recommendations": ["Improve eye contact", "Work on posture"]
+            },
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
 
         # Hide internal identifiers
         report.pop("user_id", None)

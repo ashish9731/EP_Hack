@@ -1,10 +1,12 @@
-from fastapi import APIRouter, Cookie, Header
+from fastapi import APIRouter, Cookie, Header, HTTPException
 from typing import Optional
 from datetime import datetime, timezone
 import uuid
 
-from utils.supabase_auth import get_current_user
+from utils.auth import get_current_user
 
+# Mock storage for coaching requests
+coaching_requests = {}
 
 def create_coaching_router(supabase):
     router = APIRouter(prefix="/coaching", tags=["coaching"])
@@ -15,7 +17,7 @@ def create_coaching_router(supabase):
         session_token: Optional[str] = Cookie(None),
         authorization: Optional[str] = Header(None),
     ):
-        user = await get_current_user(session_token, authorization)
+        user = get_current_user(session_token, authorization)
 
         now = datetime.now(timezone.utc).isoformat()
         req_id = f"coachreq_{uuid.uuid4().hex}"
@@ -34,10 +36,8 @@ def create_coaching_router(supabase):
             "updated_at": now,
         }
 
-        try:
-            supabase.table("coaching_requests").insert(doc).execute()
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Failed to create coaching request: {str(e)}")
+        # Save coaching request
+        coaching_requests[req_id] = doc
             
         return {"request_id": req_id}
 
