@@ -5,12 +5,11 @@ import { ArrowRight, CheckCircle, BarChart3, Video, Brain, MessageSquare, Sparkl
 
 const Landing = () => {
   const navigate = useNavigate();
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(true);
 
   useEffect(() => {
-    // Check if user is logged in by checking for session token
-    const token = localStorage.getItem('session_token');
-    setIsLoggedIn(!!token);
+    // Skip authentication check - always logged in
+    setIsLoggedIn(true);
   }, []);
   
   return (
@@ -28,30 +27,12 @@ const Landing = () => {
             <span>Executive Presence</span>{' '}
             <span style={{color: '#D4AF37'}}>Quotient</span>
           </div>
-          {isLoggedIn ? (
-              <Button 
-                onClick={() => navigate('/dashboard')}
-                style={{backgroundColor: '#D4AF37', color: '#FFFFFF'}}
-              >
-                <LayoutDashboard className="mr-2 h-4 w-4" /> Dashboard
-              </Button>
-            ) : (
-              <>
-                <Button 
-                  variant="ghost" 
-                  onClick={() => navigate('/login')} 
-                  data-testid="login-link"
-                >
-                  Sign In
-                </Button>
-                <Button 
-                  onClick={() => navigate('/signup')} 
-                  data-testid="signup-link"
-                >
-                  Get Started <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </>
-            )}
+          <Button 
+            onClick={() => navigate('/dashboard')}
+            style={{backgroundColor: '#D4AF37', color: '#FFFFFF'}}
+          >
+            <LayoutDashboard className="mr-2 h-4 w-4" /> Dashboard
+          </Button>
         </div>
       </nav>
       
@@ -124,66 +105,35 @@ const Landing = () => {
             </p>
             
             <div className="flex gap-4 justify-center flex-wrap">
-              {isLoggedIn ? (
-                <>
-                  <Button 
-                    size="lg" 
-                    onClick={() => navigate('/dashboard')}
-                    style={{
-                      fontSize: '17px',
-                      padding: '14px 36px',
-                      fontWeight: 500,
-                      backgroundColor: '#D4AF37',
-                      color: '#FFFFFF'
-                    }}
-                  >
-                    Go to Dashboard <ArrowRight className="ml-2 h-5 w-5" />
-                  </Button>
-                  <Button 
-                    size="lg" 
-                    variant="outline" 
-                    onClick={() => navigate('/pricing')}
-                    style={{
-                      fontSize: '17px',
-                      padding: '14px 36px',
-                      borderColor: '#D4AF37',
-                      color: '#D4AF37',
-                      border: '2px solid #D4AF37'
-                    }}
-                  >
-                    View Pricing
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button 
-                    size="lg" 
-                    onClick={() => navigate('/signup')} 
-                    data-testid="cta-button"
-                    style={{
-                      fontSize: '17px',
-                      padding: '14px 36px',
-                      fontWeight: 500
-                    }}
-                  >
-                    Start Your Assessment <ArrowRight className="ml-2 h-5 w-5" />
-                  </Button>
-                  <Button 
-                    size="lg" 
-                    variant="outline" 
-                    onClick={() => navigate('/pricing')}
-                    style={{
-                      fontSize: '17px',
-                      padding: '14px 36px',
-                      borderColor: '#D4AF37',
-                      color: '#D4AF37',
-                      border: '2px solid #D4AF37'
-                    }}
-                  >
-                    View Pricing
-                  </Button>
-                </>
-              )}
+              <>
+                <Button 
+                  size="lg" 
+                  onClick={() => navigate('/dashboard')}
+                  style={{
+                    fontSize: '17px',
+                    padding: '14px 36px',
+                    fontWeight: 500,
+                    backgroundColor: '#D4AF37',
+                    color: '#FFFFFF'
+                  }}
+                >
+                  Go to Dashboard <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+                <Button 
+                  size="lg" 
+                  variant="outline" 
+                  onClick={() => navigate('/pricing')}
+                  style={{
+                    fontSize: '17px',
+                    padding: '14px 36px',
+                    borderColor: '#D4AF37',
+                    color: '#D4AF37',
+                    border: '2px solid #D4AF37'
+                  }}
+                >
+                  View Pricing
+                </Button>
+              </>
             </div>
             
             <div style={{

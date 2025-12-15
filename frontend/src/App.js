@@ -15,7 +15,7 @@ import SharedReport from './pages/SharedReport';
 import AuthCallback from './pages/AuthCallback';
 import Methodology from './pages/Methodology';
 import Pricing from './pages/Pricing';
-import { ProtectedRoute } from './components/ProtectedRoute';
+// import { ProtectedRoute } from './components/ProtectedRoute';
 
 function AppRouter() {
   const location = useLocation();
@@ -30,15 +30,15 @@ function AppRouter() {
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
       
-      <Route path="/pricing" element={<ProtectedRoute><Pricing /></ProtectedRoute>} />
-      <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-      <Route path="/know-your-ep" element={<ProtectedRoute><KnowYourEP /></ProtectedRoute>} />
-      <Route path="/report/:reportId" element={<ProtectedRoute><Report /></ProtectedRoute>} />
-      <Route path="/simulator" element={<ProtectedRoute><Simulator /></ProtectedRoute>} />
-      <Route path="/learning" element={<ProtectedRoute><LearningBytes /></ProtectedRoute>} />
-      <Route path="/training" element={<ProtectedRoute><Training /></ProtectedRoute>} />
-      <Route path="/coaching" element={<ProtectedRoute><ExecutiveCoaching /></ProtectedRoute>} />
-      <Route path="/methodology" element={<ProtectedRoute><Methodology /></ProtectedRoute>} />
+      <Route path="/pricing" element={<Pricing />} />
+      <Route path="/dashboard" element={<Dashboard />} />
+      <Route path="/know-your-ep" element={<KnowYourEP />} />
+      <Route path="/report/:reportId" element={<Report />} />
+      <Route path="/simulator" element={<Simulator />} />
+      <Route path="/learning" element={<LearningBytes />} />
+      <Route path="/training" element={<Training />} />
+      <Route path="/coaching" element={<ExecutiveCoaching />} />
+      <Route path="/methodology" element={<Methodology />} />
       <Route path="/shared/:shareId" element={<SharedReport />} />
       
       <Route path="*" element={<Navigate to="/" />} />
