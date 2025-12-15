@@ -12,8 +12,7 @@
       "src": "backend/server.py",
       "use": "@vercel/python",
       "config": {
-        "runtime": "python3.9",
-        "includeFiles": ["backend/**"]
+        "runtime": "python3.9"
       }
     }
   ],
@@ -26,19 +25,5 @@
       "src": "/(.*)",
       "dest": "frontend/build/$1"
     }
-  ],
-  "build": {
-    "env": {
-      "SUPABASE_URL": "$SUPABASE_URL",
-      "SUPABASE_KEY": "$SUPABASE_KEY",
-      "OPENAI_API_KEY": "$OPENAI_API_KEY",
-      "FRONTEND_URL": "$FRONTEND_URL"
-    }
-  },
-  "env": {
-    "SUPABASE_URL": "$SUPABASE_URL",
-    "SUPABASE_KEY": "$SUPABASE_KEY",
-    "OPENAI_API_KEY": "$OPENAI_API_KEY",
-    "FRONTEND_URL": "$FRONTEND_URL"
-  }
+  ]
 }
