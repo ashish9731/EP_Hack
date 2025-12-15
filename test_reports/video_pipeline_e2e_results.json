@@ -1,0 +1,71 @@
+{
+  "total_tests": 9,
+  "passed_tests": 9,
+  "success_rate": 100.0,
+  "test_results": [
+    {
+      "test_name": "Auth - Login",
+      "success": true,
+      "details": "Token: session_26ff95386e4f...",
+      "error": "",
+      "timestamp": "2025-12-14T18:06:04.428469"
+    },
+    {
+      "test_name": "Video Upload - MP4",
+      "success": true,
+      "details": "Video ID: video_e640c8ee6f08457fadb06c952b8cd58a, Size: 158468 bytes",
+      "error": "",
+      "timestamp": "2025-12-14T18:06:04.473552"
+    },
+    {
+      "test_name": "Processing Start - MP4",
+      "success": true,
+      "details": "Job ID: job_61f2065009c048218beec39043fb1895",
+      "error": "",
+      "timestamp": "2025-12-14T18:06:04.552283"
+    },
+    {
+      "test_name": "Processing Complete - MP4",
+      "success": true,
+      "details": "All stages completed: transcribing \u2192 video_analysis \u2192 scoring \u2192 completed, Report ID: report_2a0b9893f5ee41e0aaebf4035a551bd5",
+      "error": "",
+      "timestamp": "2025-12-14T18:06:25.989449"
+    },
+    {
+      "test_name": "Report Validation - MP4",
+      "success": true,
+      "details": "Overall: 19.2, Gravitas: 0.0, Communication: 48.0, Presence: 0.0, Storytelling: None (no story detected)",
+      "error": "",
+      "timestamp": "2025-12-14T18:06:26.039774"
+    },
+    {
+      "test_name": "Video Upload - WEBM",
+      "success": true,
+      "details": "Video ID: video_861c19cbd22b4a4b9510707d10c3ca43, Size: 237426 bytes",
+      "error": "",
+      "timestamp": "2025-12-14T18:06:26.107693"
+    },
+    {
+      "test_name": "Processing Start - WEBM",
+      "success": true,
+      "details": "Job ID: job_d99e8a0a1f5c47e58ad8bd53624d62ce",
+      "error": "",
+      "timestamp": "2025-12-14T18:06:26.163049"
+    },
+    {
+      "test_name": "Processing Complete - WEBM",
+      "success": true,
+      "details": "All stages completed: transcribing \u2192 video_analysis \u2192 nlp_analysis \u2192 scoring \u2192 completed, Report ID: report_81ba9b5076994936889e76b432c55527",
+      "error": "",
+      "timestamp": "2025-12-14T18:06:41.693721"
+    },
+    {
+      "test_name": "Report Validation - WEBM",
+      "success": true,
+      "details": "Overall: 62.7, Gravitas: 80.0, Communication: 48.0, Presence: 65.0, Storytelling: None (no story detected)",
+      "error": "",
+      "timestamp": "2025-12-14T18:06:41.730876"
+    }
+  ],
+  "pipeline_operational": true
+}

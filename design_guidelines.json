@@ -1,0 +1,163 @@
+{
+  "design_system": {
+    "identity": {
+      "name": "Executive Presence Quotient (EPQ)",
+      "archetype": "Jewel & Luxury (The Boardroom Future)",
+      "vibe": "Authoritative, Empathetic, Data-Driven, Premium",
+      "principles": [
+        "Fusion: HBR Authority x Fintech Precision",
+        "Emotion: Confidence through Clarity",
+        "Content: Data is the Hero",
+        "Zoom: Focus on the Human Face",
+        "Negative Space: Luxury = Room to Breathe"
+      ]
+    },
+    "typography": {
+      "headings": {
+        "family": "Playfair Display, serif",
+        "weights": ["600", "700"],
+        "usage": "Main Page Titles, Section Headers, Score Displays",
+        "letterSpacing": "-0.02em"
+      },
+      "body": {
+        "family": "Inter, sans-serif",
+        "weights": ["400", "500"],
+        "usage": "Paragraphs, UI Labels, Form Inputs",
+        "letterSpacing": "0em"
+      },
+      "data": {
+        "family": "JetBrains Mono, monospace",
+        "weights": ["500"],
+        "usage": "Charts, Metrics, AI Analysis Logs, Timestamps",
+        "letterSpacing": "-0.05em"
+      }
+    },
+    "colors": {
+      "light": {
+        "background": "#F8FAFC",
+        "foreground": "#0F172A",
+        "card": "#FFFFFF",
+        "card_foreground": "#0F172A",
+        "primary": "#0F172A",
+        "primary_foreground": "#F8FAFC",
+        "secondary": "#F1F5F9",
+        "secondary_foreground": "#0F172A",
+        "accent": "#D4AF37",
+        "accent_foreground": "#FFFFFF",
+        "muted": "#F1F5F9",
+        "muted_foreground": "#64748B",
+        "border": "#E2E8F0"
+      },
+      "dark": {
+        "background": "#020617",
+        "foreground": "#F8FAFC",
+        "card": "#0F172A",
+        "card_foreground": "#F8FAFC",
+        "primary": "#F8FAFC",
+        "primary_foreground": "#0F172A",
+        "secondary": "#1E293B",
+        "secondary_foreground": "#F8FAFC",
+        "accent": "#D4AF37",
+        "accent_foreground": "#FFFFFF",
+        "muted": "#1E293B",
+        "muted_foreground": "#94A3B8",
+        "border": "#1E293B"
+      },
+      "semantic": {
+        "success": "#10B981",
+        "warning": "#F59E0B",
+        "error": "#EF4444",
+        "info": "#3B82F6",
+        "score_high": "#D4AF37",
+        "score_med": "#94A3B8",
+        "score_low": "#EF4444"
+      }
+    },
+    "spacing": {
+      "container_padding": "p-6 md:p-12 lg:p-24",
+      "section_gap": "gap-16 md:gap-32",
+      "card_padding": "p-6 md:p-8",
+      "grid_gap": "gap-6 md:gap-8"
+    },
+    "radius": {
+      "default": "0.5rem",
+      "card": "0.75rem",
+      "button": "9999px",
+      "input": "0.5rem"
+    },
+    "shadows": {
+      "card": "0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)",
+      "hover": "0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02)",
+      "glow": "0 0 20px rgba(212, 175, 55, 0.3)"
+    }
+  },
+  "layout_strategies": {
+    "landing_page": {
+      "grid": "Tetris Grid (Mode A)",
+      "description": "Asymmetrical layout with large hero visuals and offset text blocks.",
+      "components": [
+        "Hero: Split screen with 3D/Video element",
+        "Features: Bento Grid with 'Tracing Beam' borders",
+        "Testimonials: Horizontal scroll (Marquee)",
+        "CTA: Centered, high contrast"
+      ]
+    },
+    "dashboard": {
+      "grid": "Control Room Grid (Mode B)",
+      "description": "Dense, data-heavy layout with collapsible sidebars and widget panels.",
+      "components": [
+        "Sidebar: Collapsible, icon-only on mobile",
+        "Header: Glassmorphism, sticky",
+        "Main: 4-column grid for metrics",
+        "Report View: Split view (Video Left, Data Right)"
+      ]
+    }
+  },
+  "components": {
+    "buttons": {
+      "primary": "bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg hover:shadow-xl transition-all duration-300 rounded-full px-8 py-3 font-medium tracking-wide",
+      "secondary": "bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded-full px-6 py-2 font-medium",
+      "outline": "border-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground rounded-full px-6 py-2 font-medium transition-colors"
+    },
+    "cards": {
+      "feature": "bg-card text-card-foreground border border-border/50 shadow-card hover:shadow-hover transition-all duration-300 rounded-xl overflow-hidden group relative",
+      "metric": "bg-card border border-border p-6 rounded-lg flex flex-col justify-between hover:border-accent/50 transition-colors",
+      "glass": "bg-white/70 dark:bg-black/60 backdrop-blur-xl border border-white/20 shadow-lg rounded-xl"
+    },
+    "inputs": {
+      "default": "flex h-12 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+    }
+  },
+  "assets": {
+    "images": {
+      "hero_executive": "https://images.unsplash.com/photo-1740847262528-a29f09775256?crop=entropy&cs=srgb&fm=jpg&q=85",
+      "boardroom_meeting": "https://images.unsplash.com/photo-1637216461875-8307722ee8d8?crop=entropy&cs=srgb&fm=jpg&q=85",
+      "abstract_data_bg": "https://images.unsplash.com/photo-1759268966424-7ccece60985b?crop=entropy&cs=srgb&fm=jpg&q=85",
+      "coach_portrait_1": "https://images.unsplash.com/flagged/photo-1567347611511-a8db7dce144f?crop=entropy&cs=srgb&fm=jpg&q=85",
+      "coach_portrait_2": "https://images.pexels.com/photos/4098274/pexels-photo-4098274.jpeg",
+      "partner_logo_1": "https://images.unsplash.com/photo-1759724369762-376e0a29478b?crop=entropy&cs=srgb&fm=jpg&q=85",
+      "partner_logo_2": "https://images.unsplash.com/photo-1636955903101-d6b4b926018c?crop=entropy&cs=srgb&fm=jpg&q=85"
+    },
+    "icons": "Lucide React (Default)",
+    "3d_library": "Framer Motion (for 2D/3D transitions) + Recharts (for Data)"
+  },
+  "instructions_to_main_agent": [
+    "1. SETUP: Install 'lucide-react', 'recharts', 'framer-motion', 'clsx', 'tailwind-merge' immediately.",
+    "2. FONTS: Import 'Playfair Display', 'Inter', and 'JetBrains Mono' from Google Fonts in index.css.",
+    "3. THEME: Implement the 'Jewel & Luxury' color palette in tailwind.config.js. Do not use default shadcn colors.",
+    "4. LAYOUT: Use the 'Tetris Grid' for the Landing Page and 'Control Room Grid' for the Dashboard.",
+    "5. COMPONENTS: Build a custom 'VideoRecorder' component using the browser MediaStream API. Do not rely on external heavy libraries if possible.",
+    "6. REPORT: The Report Page is the core value. It must look like a high-end PDF printout but interactive. Use 'recharts' for the radar charts (EP Score).",
+    "7. SIMULATOR: Create a card-based interface for the 6 scenarios. Use 'framer-motion' for card flips/transitions.",
+    "8. AUTH: Implement Google Sign-In and JWT. Use a split-screen layout for Auth pages (Image Left, Form Right).",
+    "9. UNIVERSAL: Apply 'lenis' for smooth scrolling on the marketing pages.",
+    "10. ACCESSIBILITY: Ensure all text meets APCA contrast standards. Use 'data-testid' on all interactive elements."
+  ],
+  "universal_guidelines": [
+    "Avoid 'AI Slop': No generic gradients, no centered text blocks without purpose.",
+    "Micro-Interactions: Every button must have a hover state (scale, color shift, shadow).",
+    "Spacing: Use 'p-8' or 'p-12' where you would normally use 'p-4'. Luxury is space.",
+    "Dark Mode: Ensure the dashboard looks like a Bloomberg Terminal - high contrast, dark background, neon data.",
+    "Glassmorphism: Use it for the sticky header and modal overlays, but keep it subtle (blur-xl, white/10)."
+  ]
+}

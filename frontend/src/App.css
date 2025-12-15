@@ -1,0 +1,83 @@
+/* Professional Corporate Theme with Golden Accents */
+
+:root {
+  --color-background: #FFFFFF;
+  --color-foreground: #1E293B;
+  --color-primary: #0F172A;
+  --color-accent: #D4AF37;
+  --color-gold: #D4AF37;
+  --color-secondary: #F8FAFC;
+  --color-muted: #64748B;
+  --color-border: #E2E8F0;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: #FFFFFF !important;
+  color: #1E293B !important;
+}
+
+/* Global Button Styling - All buttons have fully curved edges */
+button:not(.card-3d):not([class*="card"]) {
+  border-radius: 9999px !important;
+}
+
+/* Cards should have rectangular/slightly rounded corners */
+.card-3d {
+  border-radius: 16px !important;
+}
+
+/* Input fields styling */
+input, textarea, select {
+  border-radius: 12px !important;
+}
+
+.bg-background { background-color: #FFFFFF !important; }
+.bg-primary { background-color: #0F172A !important; }
+.bg-accent { background-color: #D4AF37 !important; }
+.bg-gold { background-color: #D4AF37 !important; }
+.bg-secondary { background-color: #F8FAFC !important; }
+.text-primary { color: #0F172A !important; }
+.text-accent { color: #D4AF37 !important; }
+.text-gold { color: #D4AF37 !important; }
+.text-foreground { color: #1E293B !important; }
+.text-muted-foreground { color: #64748B !important; }
+.border-accent { border-color: #D4AF37 !important; }
+.border-gold { border-color: #D4AF37 !important; }
+.border-border { border-color: #E2E8F0 !important; }
+
+.text-gradient-gold {
+  background: linear-gradient(135deg, #D4AF37 0%, #F4D03F 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* 3D Card Hover Effects */
+.card-3d {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-style: preserve-3d;
+  perspective: 1000px;
+}
+
+.card-3d:hover {
+  transform: translateY(-4px) rotateX(2deg);
+  box-shadow: 0 20px 40px -12px rgba(212, 175, 55, 0.2), 0 8px 16px -8px rgba(0, 0, 0, 0.1);
+}
+
+.card-hover {
+  transition: all 0.2s ease;
+}
+
+.card-hover:hover {
+  border-color: #D4AF37;
+  box-shadow: 0 4px 12px -2px rgba(212, 175, 55, 0.15);
+}
+
+/* Spin animation */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

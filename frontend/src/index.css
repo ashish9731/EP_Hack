@@ -1,0 +1,105 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-background: #FFFFFF;
+  --color-foreground: #1E293B;
+  --color-primary: #0F172A;
+  --color-accent: #D4AF37;
+  --color-secondary: #F8FAFC;
+  --color-muted: #64748B;
+  --color-border: #E2E8F0;
+  --color-gold: #D4AF37;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-weight: 600;
+    letter-spacing: -0.025em;
+    color: var(--color-primary);
+  }
+  
+  /* Global button styling - all buttons have fully curved edges */
+  button:not(.card-3d):not([class*="card"]) {
+    border-radius: 9999px !important;
+  }
+  
+  /* Cards should have rectangular/slightly rounded corners */
+  .card-3d {
+    border-radius: 16px !important;
+  }
+  
+  /* Input fields - slight rounding */
+  input, textarea, select {
+    border-radius: 12px !important;
+  }
+}
+
+.bg-background { background-color: var(--color-background) !important; }
+.bg-primary { background-color: var(--color-primary) !important; }
+.bg-accent { background-color: var(--color-accent) !important; }
+.bg-secondary { background-color: var(--color-secondary) !important; }
+.text-primary { color: var(--color-primary) !important; }
+.text-accent { color: var(--color-accent) !important; }
+.text-gold { color: var(--color-gold) !important; }
+.text-foreground { color: var(--color-foreground) !important; }
+.text-muted-foreground { color: var(--color-muted) !important; }
+.border-accent { border-color: var(--color-accent) !important; }
+.border-gold { border-color: var(--color-gold) !important; }
+.border-border { border-color: var(--color-border) !important; }
+
+.font-mono {
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -1000px 0; }
+  100% { background-position: 1000px 0; }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+.card-hover {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.card-hover:hover {
+  transform: translateY(-8px) translateZ(20px);
+  box-shadow: 0 25px 50px -12px rgba(212, 175, 55, 0.25), 0 15px 20px -10px rgba(212, 175, 55, 0.15), 0 0 0 1px rgba(212, 175, 55, 0.1);
+  border-color: #D4AF37 !important;
+}
+
+.card-3d {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-style: preserve-3d;
+  perspective: 1000px;
+}
+
+.card-3d:hover {
+  transform: translateY(-10px) rotateX(2deg);
+  box-shadow: 0 30px 60px -15px rgba(212, 175, 55, 0.3), 0 20px 30px -15px rgba(212, 175, 55, 0.2), inset 0 1px 0 rgba(212, 175, 55, 0.1);
+  border-color: #D4AF37 !important;
+}

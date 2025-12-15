@@ -1,0 +1,196 @@
+{
+  "total_tests": 27,
+  "passed_tests": 27,
+  "success_rate": 100.0,
+  "test_results": [
+    {
+      "test_name": "Auth - Login",
+      "success": true,
+      "details": "Status: 200, Response: {'user': {'user_id': 'user_3f651a74df79', 'email': 'uitest_golden@test.com', 'name': 'Golden UI Tester', 'picture': None, 'created_at': '2025-12-14T08:50:10.078145+00:00'}, 'session_token': 'session_1",
+      "error": "",
+      "timestamp": "2025-12-14T18:04:52.266112"
+    },
+    {
+      "test_name": "Auth - Get Me",
+      "success": true,
+      "details": "Status: 200, Response: {'user_id': 'user_3f651a74df79', 'email': 'uitest_golden@test.com', 'name': 'Golden UI Tester', 'picture': None, 'created_at': '2025-12-14T08:50:10.078145+00:00'}",
+      "error": "",
+      "timestamp": "2025-12-14T18:04:52.320678"
+    },
+    {
+      "test_name": "Video - Upload",
+      "success": true,
+      "details": "Status: 200, Response: {'video_id': 'video_0190454c2f554f228d8d8a43efd11c84', 'message': 'Video uploaded successfully'}",
+      "error": "",
+      "timestamp": "2025-12-14T18:04:52.375074"
+    },
+    {
+      "test_name": "Video - Process",
+      "success": true,
+      "details": "Status: 200, Response: {'job_id': 'job_7180f8b723b7434f9eb8c80db764dcb5', 'message': 'Processing started'}",
+      "error": "",
+      "timestamp": "2025-12-14T18:04:52.416828"
+    },
+    {
+      "test_name": "Jobs - Get Status",
+      "success": true,
+      "details": "Status: 200, Response: {'job_id': 'job_7180f8b723b7434f9eb8c80db764dcb5', 'user_id': 'user_3f651a74df79', 'video_id': 'video_0190454c2f554f228d8d8a43efd11c84', 'status': 'transcribing', 'progress': 10, 'current_step': 'Extr",
+      "error": "",
+      "timestamp": "2025-12-14T18:04:52.767643"
+    },
+    {
+      "test_name": "Jobs - Get Status",
+      "success": true,
+      "details": "Status: 200, Response: {'job_id': 'job_7180f8b723b7434f9eb8c80db764dcb5', 'user_id': 'user_3f651a74df79', 'video_id': 'video_0190454c2f554f228d8d8a43efd11c84', 'status': 'failed', 'progress': 10, 'current_step': 'Extracting",
+      "error": "",
+      "timestamp": "2025-12-14T18:04:55.817535"
+    },
+    {
+      "test_name": "Jobs - Get Status",
+      "success": true,
+      "details": "Status: 200, Response: {'job_id': 'job_7180f8b723b7434f9eb8c80db764dcb5', 'user_id': 'user_3f651a74df79', 'video_id': 'video_0190454c2f554f228d8d8a43efd11c84', 'status': 'failed', 'progress': 10, 'current_step': 'Extracting",
+      "error": "",
+      "timestamp": "2025-12-14T18:04:58.888426"
+    },
+    {
+      "test_name": "Jobs - Get Status",
+      "success": true,
+      "details": "Status: 200, Response: {'job_id': 'job_7180f8b723b7434f9eb8c80db764dcb5', 'user_id': 'user_3f651a74df79', 'video_id': 'video_0190454c2f554f228d8d8a43efd11c84', 'status': 'failed', 'progress': 10, 'current_step': 'Extracting",
+      "error": "",
+      "timestamp": "2025-12-14T18:05:01.933265"
+    },
+    {
+      "test_name": "Jobs - Get Status",
+      "success": true,
+      "details": "Status: 200, Response: {'job_id': 'job_7180f8b723b7434f9eb8c80db764dcb5', 'user_id': 'user_3f651a74df79', 'video_id': 'video_0190454c2f554f228d8d8a43efd11c84', 'status': 'failed', 'progress': 10, 'current_step': 'Extracting",
+      "error": "",
+      "timestamp": "2025-12-14T18:05:05.043099"
+    },
+    {
+      "test_name": "Jobs - Get Status",
+      "success": true,
+      "details": "Status: 200, Response: {'job_id': 'job_7180f8b723b7434f9eb8c80db764dcb5', 'user_id': 'user_3f651a74df79', 'video_id': 'video_0190454c2f554f228d8d8a43efd11c84', 'status': 'failed', 'progress': 10, 'current_step': 'Extracting",
+      "error": "",
+      "timestamp": "2025-12-14T18:05:08.092310"
+    },
+    {
+      "test_name": "Jobs - Get Status",
+      "success": true,
+      "details": "Status: 200, Response: {'job_id': 'job_7180f8b723b7434f9eb8c80db764dcb5', 'user_id': 'user_3f651a74df79', 'video_id': 'video_0190454c2f554f228d8d8a43efd11c84', 'status': 'failed', 'progress': 10, 'current_step': 'Extracting",
+      "error": "",
+      "timestamp": "2025-12-14T18:05:11.151820"
+    },
+    {
+      "test_name": "Jobs - Get Status",
+      "success": true,
+      "details": "Status: 200, Response: {'job_id': 'job_7180f8b723b7434f9eb8c80db764dcb5', 'user_id': 'user_3f651a74df79', 'video_id': 'video_0190454c2f554f228d8d8a43efd11c84', 'status': 'failed', 'progress': 10, 'current_step': 'Extracting",
+      "error": "",
+      "timestamp": "2025-12-14T18:05:14.213187"
+    },
+    {
+      "test_name": "Jobs - Get Status",
+      "success": true,
+      "details": "Status: 200, Response: {'job_id': 'job_7180f8b723b7434f9eb8c80db764dcb5', 'user_id': 'user_3f651a74df79', 'video_id': 'video_0190454c2f554f228d8d8a43efd11c84', 'status': 'failed', 'progress': 10, 'current_step': 'Extracting",
+      "error": "",
+      "timestamp": "2025-12-14T18:05:17.320875"
+    },
+    {
+      "test_name": "Jobs - Get Status",
+      "success": true,
+      "details": "Status: 200, Response: {'job_id': 'job_7180f8b723b7434f9eb8c80db764dcb5', 'user_id': 'user_3f651a74df79', 'video_id': 'video_0190454c2f554f228d8d8a43efd11c84', 'status': 'failed', 'progress': 10, 'current_step': 'Extracting",
+      "error": "",
+      "timestamp": "2025-12-14T18:05:20.405456"
+    },
+    {
+      "test_name": "Reports - List",
+      "success": true,
+      "details": "Status: 200, Response: {'reports': [{'report_id': 'report_cc6a11dc98be4cb99d8a80465e323395', 'user_id': 'user_3f651a74df79', 'video_id': 'video_5f357799b4ab4384b35f0e43bfc4dfd2', 'job_id': 'job_68bf2f206d4f4ad3a210e66d9b08f",
+      "error": "",
+      "timestamp": "2025-12-14T18:05:23.526806"
+    },
+    {
+      "test_name": "Reports - Check for Sharing Test",
+      "success": true,
+      "details": "Status: 200, Response: {'reports': [{'report_id': 'report_cc6a11dc98be4cb99d8a80465e323395', 'user_id': 'user_3f651a74df79', 'video_id': 'video_5f357799b4ab4384b35f0e43bfc4dfd2', 'job_id': 'job_68bf2f206d4f4ad3a210e66d9b08f",
+      "error": "",
+      "timestamp": "2025-12-14T18:05:23.588274"
+    },
+    {
+      "test_name": "Sharing - Create Share Link",
+      "success": true,
+      "details": "Status: 200, Response: {'share_id': 'share_99215c063dc04ed8b092b8c6e6bc44e5', 'expires_at': '2025-12-21T18:05:23.639449+00:00'}",
+      "error": "",
+      "timestamp": "2025-12-14T18:05:23.654417"
+    },
+    {
+      "test_name": "Sharing - Get Shared Report",
+      "success": true,
+      "details": "Status: 200, Response: {'share': {'share_id': 'share_99215c063dc04ed8b092b8c6e6bc44e5', 'report_id': 'report_cc6a11dc98be4cb99d8a80465e323395', 'owner_user_id': 'user_3f651a74df79', 'created_at': '2025-12-14T18:05:23.639449",
+      "error": "",
+      "timestamp": "2025-12-14T18:05:23.707790"
+    },
+    {
+      "test_name": "Coaching - Create Request",
+      "success": true,
+      "details": "Status: 200, Response: {'request_id': 'coachreq_32112a06912547249676a24532169f23'}",
+      "error": "",
+      "timestamp": "2025-12-14T18:05:23.787862"
+    },
+    {
+      "test_name": "Learning - Daily Tip",
+      "success": true,
+      "details": "Status: 200, Response: {'tip': 'To enhance gravitas, practice intentional pausing during conversations or presentations. Before responding or transitioning to your next point, pause briefly\u2014this not only shows confidence bu",
+      "error": "",
+      "timestamp": "2025-12-14T18:05:25.064964"
+    },
+    {
+      "test_name": "Learning - TED Talks",
+      "success": true,
+      "details": "Status: 200, Response: {'talks': [{'id': 1, 'title': 'Your body language may shape who you are', 'speaker': 'Amy Cuddy', 'duration': '21 min', 'relevance': 'Presence, Body Language, Confidence', 'url': 'https://www.ted.com/",
+      "error": "",
+      "timestamp": "2025-12-14T18:05:25.113476"
+    },
+    {
+      "test_name": "Training - Modules List",
+      "success": true,
+      "details": "Status: 200, Response: {'modules': [{'id': 'strategic-pauses', 'title': 'Strategic Pauses', 'description': 'Master the art of using silence to enhance authority and emphasize key points', 'duration': '8 minutes', 'difficult",
+      "error": "",
+      "timestamp": "2025-12-14T18:05:25.165610"
+    },
+    {
+      "test_name": "Training - Module Content (strategic-pauses)",
+      "success": true,
+      "details": "Status: 200, Response: {'module_id': 'strategic-pauses', 'content': \"---\\n\\n**Key Concept:**  \\nStrategic pauses are deliberate breaks executives take during decision-making or ongoing discussions to reflect, gather their t",
+      "error": "",
+      "timestamp": "2025-12-14T18:05:29.510931"
+    },
+    {
+      "test_name": "Retention - Get Settings",
+      "success": true,
+      "details": "Status: 200, Response: {'default_retention': '90_days', 'videos': [{'video_id': 'video_0cff53e803664b61931e9c54c1c04240', 'filename': 'test_video.mp4', 'uploaded_at': '2025-12-14T09:24:05.796743+00:00'}, {'video_id': 'video",
+      "error": "",
+      "timestamp": "2025-12-14T18:05:29.570878"
+    },
+    {
+      "test_name": "Retention - Set Default (Valid)",
+      "success": true,
+      "details": "Status: 200, Response: {'user_id': 'user_3f651a74df79', 'default_retention': '90_days', 'message': 'Default retention set to 90_days'}",
+      "error": "",
+      "timestamp": "2025-12-14T18:05:29.654781"
+    },
+    {
+      "test_name": "Retention - Set Default (Invalid)",
+      "success": true,
+      "details": "Status: 400, Response: {'detail': \"Invalid retention period. Choose from: ['7_days', '30_days', '90_days', '1_year', 'permanent']\"}",
+      "error": "",
+      "timestamp": "2025-12-14T18:05:29.698561"
+    },
+    {
+      "test_name": "Auth - Logout",
+      "success": true,
+      "details": "Status: 200, Response: {'message': 'Logged out'}",
+      "error": "",
+      "timestamp": "2025-12-14T18:05:29.741913"
+    }
+  ]
+}
