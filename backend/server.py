@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 from models.user import UserCreate, User, LoginRequest, SignupRequest, AuthResponse
 from models.video import JobStatus, VideoMetadata, EPReport
 from models.profile import ProfileCreateRequest, UserProfile
-from utils.auth import create_session_token, get_current_user, create_user, get_user_by_email, verify_password, delete_session
+from utils.auth import create_user, get_user_by_email, verify_password
 from utils.gridfs_helper import save_video_to_storage, get_video_from_storage
 from services.video_processor import VideoProcessorService
 from routes.profile import create_profile_router
@@ -73,89 +73,44 @@ async def signup(request: SignupRequest, response: Response):
     logger.info(f"Signup attempt for email: {request.email}")
     
     try:
-        # Create a new user
-        user = create_user(request.email, request.password, request.name)
-        logger.info(f"User created successfully: {user['id']}")
+        # Create a new user (but don't actually store it since we're bypassing auth)
+        # Just return a success message without creating sessions
+        logger.info(f"Mock signup successful for: {request.email}")
         
-        # Create session token
-        session_token = create_session_token(user["id"])
-        logger.info(f"Session token created: {session_token}")
-        
-        # Set cookie
-        is_production = not os.getenv("DEV_MODE", "false").lower() == "true"
-        response.set_cookie(
-            key="session_token",
-            value=session_token,
-            httponly=True,
-            secure=is_production,
-            samesite="lax" if not is_production else "none",
-            path="/",
-            max_age=7 * 24 * 60 * 60
-        )
-        
-        # Transform user data to match existing structure
+        # Return mock user data
         user_response = {
-            "user_id": user["id"],
-            "email": user["email"],
-            "name": user["name"],
-            "created_at": user["created_at"]
+            "user_id": "mock_user_123",
+            "email": request.email,
+            "name": request.name,
+            "created_at": datetime.now(timezone.utc).isoformat()
         }
         
-        logger.info(f"Returning user data: {user_response}")
-        return {"user": user_response, "session_token": session_token}
+        logger.info(f"Returning mock user data: {user_response}")
+        return {"user": user_response, "session_token": "mock_token_123"}
         
     except Exception as e:
         logger.error(f"Signup error: {str(e)}", exc_info=True)
-        if "already exists" in str(e):
-            raise HTTPException(status_code=400, detail="Email already registered")
-        else:
-            raise HTTPException(status_code=500, detail=f"Signup error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Signup error: {str(e)}")
 
 @api_router.post("/auth/login")
 async def login(request: LoginRequest, response: Response):
     logger.info(f"Login attempt for email: {request.email}")
     
     try:
-        # Get user by email
-        user = get_user_by_email(request.email)
-        if not user:
-            logger.warning(f"User not found: {request.email}")
-            raise HTTPException(status_code=401, detail="Invalid credentials")
+        # Mock login - just return success without validating credentials
+        logger.info(f"Mock login successful for: {request.email}")
         
-        # Verify password
-        if not verify_password(request.password, user["password"]):
-            logger.warning(f"Invalid password for user: {request.email}")
-            raise HTTPException(status_code=401, detail="Invalid credentials")
-        
-        # Create session token
-        session_token = create_session_token(user["id"])
-        logger.info(f"Session token created: {session_token}")
-        
-        # Set cookie
-        is_production = not os.getenv("DEV_MODE", "false").lower() == "true"
-        response.set_cookie(
-            key="session_token",
-            value=session_token,
-            httponly=True,
-            secure=is_production,
-            samesite="lax" if not is_production else "none",
-            path="/",
-            max_age=7 * 24 * 60 * 60
-        )
-        
-        # Transform user data to match existing structure
+        # Return mock user data
         user_response = {
-            "user_id": user["id"],
-            "email": user["email"],
-            "name": user["name"],
-            "created_at": user["created_at"]
+            "user_id": "mock_user_123",
+            "email": request.email,
+            "name": "Demo User",
+            "created_at": datetime.now(timezone.utc).isoformat()
         }
         
-        logger.info(f"Returning user data: {user_response}")
-        return {"user": user_response, "session_token": session_token}
+        logger.info(f"Returning mock user data: {user_response}")
+        return {"user": user_response, "session_token": "mock_token_123"}
         
-    except HTTPException:
-        raise
     except Exception as e:
         logger.error(f"Login error: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Authentication error: {str(e)}")
@@ -169,26 +124,32 @@ async def google_auth_redirect():
     logger.info(f"Generated mock auth URL: {auth_url}")
     return {"auth_url": auth_url}
 
+# Mock user function to bypass authentication
+async def get_mock_user():
+    return {
+        "user_id": "mock_user_123",
+        "email": "demo@example.com",
+        "name": "Demo User",
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+
 @api_router.get("/auth/me")
 async def get_me(session_token: Optional[str] = Cookie(None), authorization: Optional[str] = Header(None)):
-    user = get_current_user(session_token, authorization)
+    user = await get_mock_user()
     return user
 
 @api_router.post("/auth/logout")
 async def logout(response: Response, session_token: Optional[str] = Cookie(None)):
-    if session_token:
-        delete_session(session_token)
-        
-        # Determine if we should use secure cookies (True in production, False in development)
-        is_production = not os.getenv("DEV_MODE", "false").lower() == "true"
-        
-        # Clear the cookie with the appropriate settings
-        response.delete_cookie(
-            "session_token",
-            path="/",
-            secure=is_production,
-            samesite="lax" if not is_production else "none"
-        )
+    # Clear the cookie with the appropriate settings (bypass session validation)
+    is_production = not os.getenv("DEV_MODE", "false").lower() == "true"
+    
+    # Clear the cookie with the appropriate settings
+    response.delete_cookie(
+        "session_token",
+        path="/",
+        secure=is_production,
+        samesite="lax" if not is_production else "none"
+    )
     return {"message": "Logged out"}
 
 @api_router.post("/videos/upload")
@@ -197,7 +158,7 @@ async def upload_video(
     session_token: Optional[str] = Cookie(None),
     authorization: Optional[str] = Header(None)
 ):
-    user = get_current_user(session_token, authorization)
+    user = await get_mock_user()
     
     if file.size and file.size > 200 * 1024 * 1024:
         raise HTTPException(status_code=400, detail="Video size exceeds 200MB limit")
@@ -231,7 +192,7 @@ async def process_video(
     session_token: Optional[str] = Cookie(None),
     authorization: Optional[str] = Header(None)
 ):
-    user = get_current_user(session_token, authorization)
+    user = await get_mock_user()
     
     # Mock video processing
     job_id = f"job_{uuid.uuid4().hex}"
@@ -258,7 +219,7 @@ async def get_job_status(
     session_token: Optional[str] = Cookie(None),
     authorization: Optional[str] = Header(None)
 ):
-    user = get_current_user(session_token, authorization)
+    user = await get_mock_user()
     
     # Mock job status
     job = {
@@ -278,7 +239,7 @@ async def get_report(
     session_token: Optional[str] = Cookie(None),
     authorization: Optional[str] = Header(None)
 ):
-    user = get_current_user(session_token, authorization)
+    user = await get_mock_user()
     
     # Mock report
     report = {
@@ -300,7 +261,7 @@ async def list_reports(
     session_token: Optional[str] = Cookie(None),
     authorization: Optional[str] = Header(None)
 ):
-    user = get_current_user(session_token, authorization)
+    user = await get_mock_user()
     
     # Mock reports list
     reports = [
@@ -325,7 +286,7 @@ async def stream_video(
     session_token: Optional[str] = Cookie(None),
     authorization: Optional[str] = Header(None)
 ):
-    user = get_current_user(session_token, authorization)
+    user = await get_mock_user()
     
     # Mock video streaming
     logger.info(f"Streaming video: {video_id}")
