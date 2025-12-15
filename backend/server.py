@@ -48,7 +48,7 @@ ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
 # Initialize Supabase client
-supabase = get_supabase_client()
+# Supabase client will be initialized lazily when first needed
 
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
@@ -65,7 +65,7 @@ def get_video_processor():
 async def signup(request: SignupRequest, response: Response):
     # Check if user already exists
     try:
-        user_response = supabase.table("users").select("*").eq("email", request.email).execute()
+        user_response = get_supabase_client().table("users").select("*").eq("email", request.email).execute()
         if user_response.data:
             raise HTTPException(status_code=400, detail="Email already registered")
     except Exception as e:
@@ -83,7 +83,7 @@ async def signup(request: SignupRequest, response: Response):
     }
     
     try:
-        response = supabase.table("users").insert(user_data).execute()
+        response = get_supabase_client().table("users").insert(user_data).execute()
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to create user: {str(e)}")
     
@@ -101,7 +101,7 @@ async def signup(request: SignupRequest, response: Response):
     
     # Get the created user
     try:
-        user_response = supabase.table("users").select("*").eq("id", user_id).execute()
+        user_response = get_supabase_client().table("users").select("*").eq("id", user_id).execute()
         user = user_response.data[0] if user_response.data else None
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to retrieve user: {str(e)}")
@@ -113,7 +113,7 @@ async def login(request: LoginRequest, response: Response):
     # In a real implementation, Supabase would handle authentication
     # This is a simplified version for demonstration
     try:
-        user_response = supabase.table("users").select("*").eq("email", request.email).execute()
+        user_response = get_supabase_client().table("users").select("*").eq("email", request.email).execute()
         if not user_response.data:
             raise HTTPException(status_code=401, detail="Invalid credentials")
         
@@ -159,7 +159,7 @@ async def get_me(session_token: Optional[str] = Cookie(None), authorization: Opt
 async def logout(response: Response, session_token: Optional[str] = Cookie(None)):
     if session_token:
         try:
-            supabase.table("user_sessions").delete().eq("session_token", session_token).execute()
+            get_supabase_client().table("user_sessions").delete().eq("session_token", session_token).execute()
             response.delete_cookie("session_token", path="/")
         except Exception as e:
             # Log error but still clear cookie
@@ -198,7 +198,7 @@ async def upload_video(
     
     try:
         # Check for user's default retention setting
-        user_settings_response = supabase.table("user_settings").select("*").eq("user_id", user["user_id"]).execute()
+        user_settings_response = get_supabase_client().table("user_settings").select("*").eq("user_id", user["user_id"]).execute()
         if user_settings_response.data:
             from services.video_retention import RETENTION_PERIODS
             user_settings = user_settings_response.data[0]
@@ -209,7 +209,7 @@ async def upload_video(
                 metadata_data["scheduled_deletion"] = (datetime.now(timezone.utc) + timedelta(days=days)).isoformat() if days else None
         
         # Insert metadata
-        supabase.table("video_metadata").insert(metadata_data).execute()
+        get_supabase_client().table("video_metadata").insert(metadata_data).execute()
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to store video metadata: {str(e)}")
     
@@ -225,7 +225,7 @@ async def process_video(
     
     # Get video metadata from Supabase
     try:
-        metadata_response = supabase.table("video_metadata").select("*").eq("id", video_id).eq("user_id", user["user_id"]).execute()
+        metadata_response = get_supabase_client().table("video_metadata").select("*").eq("id", video_id).eq("user_id", user["user_id"]).execute()
         if not metadata_response.data:
             raise HTTPException(status_code=404, detail="Video not found")
         metadata = metadata_response.data[0]
@@ -245,7 +245,7 @@ async def process_video(
     
     try:
         # Store job data in Supabase
-        supabase.table("processing_jobs").insert(job_data).execute()
+        get_supabase_client().table("processing_jobs").insert(job_data).execute()
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to create processing job: {str(e)}")
     
@@ -263,7 +263,7 @@ async def get_job_status(
     user = await get_current_user(session_token, authorization)
     
     try:
-        job_response = supabase.table("processing_jobs").select("*").eq("id", job_id).eq("user_id", user["user_id"]).execute()
+        job_response = get_supabase_client().table("processing_jobs").select("*").eq("id", job_id).eq("user_id", user["user_id"]).execute()
         if not job_response.data:
             raise HTTPException(status_code=404, detail="Job not found")
         job = job_response.data[0]
@@ -281,7 +281,7 @@ async def get_report(
     user = await get_current_user(session_token, authorization)
     
     try:
-        report_response = supabase.table("ep_reports").select("*").eq("id", report_id).eq("user_id", user["user_id"]).execute()
+        report_response = get_supabase_client().table("ep_reports").select("*").eq("id", report_id).eq("user_id", user["user_id"]).execute()
         if not report_response.data:
             raise HTTPException(status_code=404, detail="Report not found")
         report = report_response.data[0]
@@ -298,7 +298,7 @@ async def list_reports(
     user = await get_current_user(session_token, authorization)
     
     try:
-        reports_response = supabase.table("ep_reports").select("*").eq("user_id", user["user_id"]).order("created_at", desc=True).limit(50).execute()
+        reports_response = get_supabase_client().table("ep_reports").select("*").eq("user_id", user["user_id"]).order("created_at", desc=True).limit(50).execute()
         reports = reports_response.data
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to retrieve reports: {str(e)}")
@@ -315,7 +315,7 @@ async def stream_video(
     
     # Check if video exists
     try:
-        metadata_response = supabase.table("video_metadata").select("*").eq("id", video_id).eq("user_id", user["user_id"]).execute()
+        metadata_response = get_supabase_client().table("video_metadata").select("*").eq("id", video_id).eq("user_id", user["user_id"]).execute()
         if not metadata_response.data:
             raise HTTPException(status_code=404, detail="Video not found")
     except Exception as e:
@@ -327,11 +327,11 @@ async def stream_video(
 
 # Add the rest of the routes
 app.include_router(api_router)
-app.include_router(create_profile_router(supabase))
-app.include_router(get_subscription_routes(supabase))
-app.include_router(create_coaching_router(supabase))
-app.include_router(create_sharing_router(supabase))
-app.include_router(create_retention_router(supabase))
+app.include_router(create_profile_router(get_supabase_client()))
+app.include_router(get_subscription_routes(get_supabase_client()))
+app.include_router(create_coaching_router(get_supabase_client()))
+app.include_router(create_sharing_router(get_supabase_client()))
+app.include_router(create_retention_router(get_supabase_client()))
 
 # CORS middleware
 app.add_middleware(
@@ -361,7 +361,7 @@ async def process_video_async(job_id: str, video_id: str, user_id: str):
             "status": "processing",
             "updated_at": datetime.now(timezone.utc).isoformat()
         }
-        supabase.table("processing_jobs").update(update_data).eq("id", job_id).execute()
+        get_supabase_client().table("processing_jobs").update(update_data).eq("id", job_id).execute()
         
         # Simulate processing delay
         await asyncio.sleep(2)
@@ -371,7 +371,7 @@ async def process_video_async(job_id: str, video_id: str, user_id: str):
             "status": "completed",
             "updated_at": datetime.now(timezone.utc).isoformat()
         }
-        supabase.table("processing_jobs").update(update_data).eq("id", job_id).execute()
+        get_supabase_client().table("processing_jobs").update(update_data).eq("id", job_id).execute()
         
         # Create a sample report
         report_data = {
@@ -386,7 +386,7 @@ async def process_video_async(job_id: str, video_id: str, user_id: str):
                 "recommendations": ["Improve eye contact", "Work on posture"]
             }
         }
-        supabase.table("ep_reports").insert(report_data).execute()
+        get_supabase_client().table("ep_reports").insert(report_data).execute()
         
     except Exception as e:
         # Update job status to failed
@@ -395,7 +395,7 @@ async def process_video_async(job_id: str, video_id: str, user_id: str):
             "error_message": str(e),
             "updated_at": datetime.now(timezone.utc).isoformat()
         }
-        supabase.table("processing_jobs").update(update_data).eq("id", job_id).execute()
+        get_supabase_client().table("processing_jobs").update(update_data).eq("id", job_id).execute()
         logging.error(f"Video processing failed for job {job_id}: {str(e)}")
 
 @api_router.get("/learning/daily-tip")
