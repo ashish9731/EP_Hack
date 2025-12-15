@@ -1,7 +1,7 @@
 import os
 import tempfile
 import asyncio
-from emergentintegrations.llm.openai import OpenAISpeechToText
+from openai import OpenAI
 from dotenv import load_dotenv
 from pydub import AudioSegment
 import subprocess
