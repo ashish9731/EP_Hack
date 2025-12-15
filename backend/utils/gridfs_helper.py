@@ -1,37 +1,64 @@
-from motor.motor_asyncio import AsyncIOMotorGridFSBucket
-from fastapi import UploadFile
+import os
 import uuid
+from fastapi import UploadFile
+from supabase import create_client, Client
 
-async def save_video_to_gridfs(db, file: UploadFile) -> str:
-    fs = AsyncIOMotorGridFSBucket(db)
+def get_supabase_client() -> Client:
+    """Initialize and return a Supabase client"""
+    url: str = os.environ.get("SUPABASE_URL")
+    key: str = os.environ.get("SUPABASE_KEY")
+    
+    if not url or not key:
+        raise ValueError("SUPABASE_URL and SUPABASE_KEY must be set in environment variables")
+    
+    return create_client(url, key)
+
+async def save_video_to_storage(file: UploadFile) -> str:
+    """Save video file to Supabase storage and return video ID"""
+    supabase = get_supabase_client()
     video_id = f"video_{uuid.uuid4().hex}"
     
+    # Read file data
     file_data = await file.read()
     
-    await fs.upload_from_stream(
-        video_id,
-        file_data,
-        metadata={
+    try:
+        # Save file to Supabase storage
+        # Note: This is a simplified implementation. In a real application,
+        # you would use Supabase Storage properly with buckets
+        supabase.table("video_files").insert({
+            "id": video_id,
             "filename": file.filename,
             "content_type": file.content_type,
-            "size": len(file_data)
-        }
-    )
+            "data": file_data,
+            "size": len(file_data),
+            "created_at": "now()"
+        }).execute()
+    except Exception as e:
+        raise Exception(f"Failed to save video to storage: {str(e)}")
     
     return video_id
 
-async def get_video_from_gridfs(db, video_id: str) -> bytes:
-    fs = AsyncIOMotorGridFSBucket(db)
+async def get_video_from_storage(video_id: str) -> bytes:
+    """Retrieve video file from Supabase storage"""
+    supabase = get_supabase_client()
     
-    grid_out = await fs.open_download_stream_by_name(video_id)
-    video_data = await grid_out.read()
-    
-    return video_data
+    try:
+        # Retrieve file from Supabase storage
+        response = supabase.table("video_files").select("data").eq("id", video_id).execute()
+        if not response.data:
+            raise Exception("Video not found")
+        
+        video_data = response.data[0]["data"]
+        return video_data
+    except Exception as e:
+        raise Exception(f"Failed to retrieve video from storage: {str(e)}")
 
-async def delete_video_from_gridfs(db, video_id: str):
-    fs = AsyncIOMotorGridFSBucket(db)
+async def delete_video_from_storage(video_id: str):
+    """Delete video file from Supabase storage"""
+    supabase = get_supabase_client()
     
-    cursor = fs.find({"filename": video_id})
-    async for grid_data in cursor:
-        await fs.delete(grid_data._id)
-        break
+    try:
+        # Delete file from Supabase storage
+        supabase.table("video_files").delete().eq("id", video_id).execute()
+    except Exception as e:
+        raise Exception(f"Failed to delete video from storage: {str(e)}")

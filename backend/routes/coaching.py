@@ -3,10 +3,10 @@ from typing import Optional
 from datetime import datetime, timezone
 import uuid
 
-from utils.auth import get_current_user
+from utils.supabase_auth import get_current_user
 
 
-def create_coaching_router(db):
+def create_coaching_router(supabase):
     router = APIRouter(prefix="/coaching", tags=["coaching"])
 
     @router.post("/requests")
@@ -15,13 +15,13 @@ def create_coaching_router(db):
         session_token: Optional[str] = Cookie(None),
         authorization: Optional[str] = Header(None),
     ):
-        user = await get_current_user(db, session_token, authorization)
+        user = await get_current_user(session_token, authorization)
 
         now = datetime.now(timezone.utc).isoformat()
         req_id = f"coachreq_{uuid.uuid4().hex}"
 
         doc = {
-            "request_id": req_id,
+            "id": req_id,
             "user_id": user["user_id"],
             "name": payload.get("name"),
             "email": payload.get("email"),
@@ -34,7 +34,11 @@ def create_coaching_router(db):
             "updated_at": now,
         }
 
-        await db.coaching_requests.insert_one(doc)
+        try:
+            supabase.table("coaching_requests").insert(doc).execute()
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to create coaching request: {str(e)}")
+            
         return {"request_id": req_id}
 
     return router

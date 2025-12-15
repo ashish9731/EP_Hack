@@ -3,10 +3,10 @@ from typing import Optional
 from datetime import datetime, timezone, timedelta
 import uuid
 
-from utils.auth import get_current_user
+from utils.supabase_auth import get_current_user
 
 
-def create_sharing_router(db):
+def create_sharing_router(supabase):
     router = APIRouter(tags=["sharing"])
 
     @router.post("/reports/{report_id}/share")
@@ -15,21 +15,23 @@ def create_sharing_router(db):
         session_token: Optional[str] = Cookie(None),
         authorization: Optional[str] = Header(None),
     ):
-        user = await get_current_user(db, session_token, authorization)
+        user = await get_current_user(session_token, authorization)
 
-        report = await db.ep_reports.find_one(
-            {"report_id": report_id, "user_id": user["user_id"]},
-            {"_id": 0},
-        )
-        if not report:
-            raise HTTPException(status_code=404, detail="Report not found")
+        # Check if report exists and belongs to user
+        try:
+            report_response = supabase.table("ep_reports").select("*").eq("id", report_id).eq("user_id", user["user_id"]).execute()
+            if not report_response.data:
+                raise HTTPException(status_code=404, detail="Report not found")
+            report = report_response.data[0]
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
         share_id = f"share_{uuid.uuid4().hex}"
         now = datetime.now(timezone.utc)
         expires_at = now + timedelta(days=7)
 
         doc = {
-            "share_id": share_id,
+            "id": share_id,
             "report_id": report_id,
             "owner_user_id": user["user_id"],
             "created_at": now.isoformat(),
@@ -37,14 +39,25 @@ def create_sharing_router(db):
             "revoked": False,
         }
 
-        await db.report_shares.insert_one(doc)
+        try:
+            supabase.table("report_shares").insert(doc).execute()
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to create share link: {str(e)}")
+            
         return {"share_id": share_id, "expires_at": expires_at.isoformat()}
 
     @router.get("/shared/reports/{share_id}")
     async def get_shared_report(share_id: str):
-        share = await db.report_shares.find_one({"share_id": share_id}, {"_id": 0})
-        if not share or share.get("revoked"):
-            raise HTTPException(status_code=404, detail="Share link not found")
+        try:
+            share_response = supabase.table("report_shares").select("*").eq("id", share_id).execute()
+            if not share_response.data:
+                raise HTTPException(status_code=404, detail="Share link not found")
+            share = share_response.data[0]
+                
+            if share.get("revoked"):
+                raise HTTPException(status_code=404, detail="Share link not found")
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
         expires_at = share.get("expires_at")
         if expires_at:
@@ -54,9 +67,13 @@ def create_sharing_router(db):
             if exp < datetime.now(timezone.utc):
                 raise HTTPException(status_code=410, detail="Share link expired")
 
-        report = await db.ep_reports.find_one({"report_id": share["report_id"]}, {"_id": 0})
-        if not report:
-            raise HTTPException(status_code=404, detail="Report not found")
+        try:
+            report_response = supabase.table("ep_reports").select("*").eq("id", share["report_id"]).execute()
+            if not report_response.data:
+                raise HTTPException(status_code=404, detail="Report not found")
+            report = report_response.data[0]
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
         # Hide internal identifiers
         report.pop("user_id", None)

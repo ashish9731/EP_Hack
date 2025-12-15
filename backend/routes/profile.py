@@ -4,9 +4,9 @@ from datetime import datetime, timezone
 import uuid
 
 from models.profile import ProfileCreateRequest, UserProfile
-from utils.auth import get_current_user
+from utils.supabase_auth import get_current_user
 
-def create_profile_router(db):
+def create_profile_router(supabase):
     router = APIRouter(prefix="/profile", tags=["profile"])
     
     @router.post("/")
@@ -15,12 +15,17 @@ def create_profile_router(db):
         session_token: Optional[str] = Cookie(None),
         authorization: Optional[str] = Header(None)
     ):
-        user = await get_current_user(db, session_token, authorization)
+        user = await get_current_user(session_token, authorization)
         
-        existing_profile = await db.user_profiles.find_one({"user_id": user["user_id"]}, {"_id": 0})
+        # Check if profile exists
+        try:
+            profile_response = supabase.table("user_profiles").select("*").eq("user_id", user["user_id"]).execute()
+            existing_profile = profile_response.data[0] if profile_response.data else None
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
         
         now = datetime.now(timezone.utc).isoformat()
-        profile_doc = {
+        profile_data = {
             "user_id": user["user_id"],
             "role": request.role,
             "seniority_level": request.seniority_level,
@@ -32,13 +37,19 @@ def create_profile_router(db):
             "updated_at": now
         }
         
-        if existing_profile:
-            await db.user_profiles.update_one(
-                {"user_id": user["user_id"]},
-                {"$set": profile_doc}
-            )
-        else:
-            await db.user_profiles.insert_one(profile_doc)
+        try:
+            if existing_profile:
+                # Update existing profile
+                supabase.table("user_profiles").update(profile_data).eq("user_id", user["user_id"]).execute()
+            else:
+                # Create new profile
+                supabase.table("user_profiles").insert(profile_data).execute()
+            
+            # Get the updated/created profile
+            profile_response = supabase.table("user_profiles").select("*").eq("user_id", user["user_id"]).execute()
+            profile_doc = profile_response.data[0] if profile_response.data else profile_data
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to save profile: {str(e)}")
         
         return profile_doc
     
@@ -47,9 +58,13 @@ def create_profile_router(db):
         session_token: Optional[str] = Cookie(None),
         authorization: Optional[str] = Header(None)
     ):
-        user = await get_current_user(db, session_token, authorization)
+        user = await get_current_user(session_token, authorization)
         
-        profile = await db.user_profiles.find_one({"user_id": user["user_id"]}, {"_id": 0})
+        try:
+            profile_response = supabase.table("user_profiles").select("*").eq("user_id", user["user_id"]).execute()
+            profile = profile_response.data[0] if profile_response.data else None
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
         
         if not profile:
             return {"has_profile": False}
