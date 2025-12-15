@@ -58,7 +58,7 @@ video_processor = None
 def get_video_processor():
     global video_processor
     if video_processor is None:
-        video_processor = VideoProcessorService(supabase)
+        video_processor = VideoProcessorService(get_supabase_client())
     return video_processor
 
 @api_router.post("/auth/signup")
