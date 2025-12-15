@@ -13,26 +13,18 @@ const AuthCallback = () => {
     hasProcessed.current = true;
     
     const processSession = async () => {
-      try {
-        const hash = location.hash;
-        const params = new URLSearchParams(hash.substring(1));
-        const sessionId = params.get('session_id');
-        
-        if (!sessionId) {
-          throw new Error('No session ID found');
-        }
-        
-        const response = await authAPI.exchangeSession(sessionId);
-        
-        navigate('/dashboard', { 
-          replace: true,
-          state: { user: response.data.user }
-        });
-      } catch (error) {
-        console.error('Auth error:', error);
-        toast.error('Authentication failed');
-        navigate('/login', { replace: true });
-      }
+      // Always redirect to dashboard without authentication
+      const mockUser = {
+        user_id: "mock_user_123",
+        email: "demo@example.com",
+        name: "Demo User",
+        created_at: new Date().toISOString()
+      };
+      
+      navigate('/dashboard', { 
+        replace: true,
+        state: { user: mockUser }
+      });
     };
     
     processSession();

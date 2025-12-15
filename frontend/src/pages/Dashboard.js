@@ -72,25 +72,37 @@ const Dashboard = () => {
   
   const fetchData = async () => {
     try {
-      const token = localStorage.getItem('session_token');
-      const API_URL = process.env.REACT_APP_BACKEND_URL;
+      // Use mock data instead of actual API calls
+      const mockUser = {
+        user_id: "mock_user_123",
+        email: "demo@example.com",
+        name: "Demo User",
+        created_at: new Date().toISOString()
+      };
       
-      const [userRes, reportsRes, profileRes] = await Promise.all([
-        authAPI.getMe(),
-        reportAPI.listReports(),
-        axios.get(`${API_URL}/api/profile/`, {
-          headers: { 'Authorization': `Bearer ${token}` },
-          withCredentials: true
-        })
-      ]);
+      const mockReports = [
+        {
+          id: "report_1",
+          created_at: new Date().toISOString(),
+          overall_score: 75,
+          gravitas_score: 70,
+          communication_score: 80,
+          presence_score: 75,
+          storytelling_score: 70,
+          video_duration: 180,
+          title: "Initial Assessment"
+        }
+      ];
       
-      setUser(userRes.data);
-      setReports(reportsRes.data.reports || []);
+      const mockProfile = {
+        has_profile: true
+      };
       
-      if (!profileRes.data.has_profile) {
-        setHasProfile(false);
-        setShowProfileModal(true);
-      }
+      setUser(mockUser);
+      setReports(mockReports);
+      setHasProfile(true);
+      
+      // Don't show profile modal for demo
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -106,13 +118,9 @@ const Dashboard = () => {
   };
   
   const handleLogout = async () => {
-    try {
-      await authAPI.logout();
-      toast.success('Logged out successfully');
-      navigate('/');
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
+    // Just redirect to home page without actual logout
+    toast.success('Logged out successfully');
+    navigate('/');
   };
   
   // Filter reports by date

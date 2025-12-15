@@ -5,12 +5,11 @@ import { ArrowRight, CheckCircle, BarChart3, Video, Brain, MessageSquare, Sparkl
 
 const Landing = () => {
   const navigate = useNavigate();
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(true); // Always logged in
 
   useEffect(() => {
-    // Check if user is logged in by checking for session token
-    const token = localStorage.getItem('session_token');
-    setIsLoggedIn(!!token);
+    // Skip authentication check
+    setIsLoggedIn(true);
   }, []);
   
   return (
@@ -35,30 +34,12 @@ const Landing = () => {
             >
               Pricing
             </Button>
-            {isLoggedIn ? (
-              <Button 
+            <Button 
                 onClick={() => navigate('/dashboard')}
                 style={{backgroundColor: '#D4AF37', color: '#FFFFFF'}}
               >
                 <LayoutDashboard className="mr-2 h-4 w-4" /> Dashboard
               </Button>
-            ) : (
-              <>
-                <Button 
-                  variant="ghost" 
-                  onClick={() => navigate('/login')} 
-                  data-testid="login-link"
-                >
-                  Sign In
-                </Button>
-                <Button 
-                  onClick={() => navigate('/signup')} 
-                  data-testid="signup-link"
-                >
-                  Get Started <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </>
-            )}
           </div>
         </div>
       </nav>
@@ -166,7 +147,7 @@ const Landing = () => {
                 <>
                   <Button 
                     size="lg" 
-                    onClick={() => navigate('/signup')} 
+                    onClick={() => navigate('/dashboard')} 
                     data-testid="cta-button"
                     style={{
                       fontSize: '17px',
