@@ -30,8 +30,12 @@ const Login = () => {
   };
   
   const handleGoogleLogin = async () => {
-    const redirectUrl = `${window.location.origin}/dashboard`;
-    window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
+    try {
+      const response = await authAPI.googleRedirect();
+      window.location.href = response.data.auth_url;
+    } catch (error) {
+      toast.error('Failed to initiate Google login');
+    }
   };
   
   return (

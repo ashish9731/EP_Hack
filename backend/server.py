@@ -145,11 +145,6 @@ async def google_auth_redirect():
     auth_url = f"{os.getenv('SUPABASE_URL')}/auth/v1/authorize?provider=google&redirect_to={redirect_url}"
     return {"auth_url": auth_url}
 
-@api_router.get("/auth/session")
-async def exchange_session(session_id: str):
-    # Using Supabase session management instead of Emergent
-    raise HTTPException(status_code=400, detail="Endpoint not supported with Supabase auth")
-
 @api_router.get("/auth/me")
 async def get_me(session_token: Optional[str] = Cookie(None), authorization: Optional[str] = Header(None)):
     user = await get_current_user(session_token, authorization)

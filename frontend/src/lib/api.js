@@ -44,7 +44,6 @@ export const authAPI = {
   },
   getMe: () => api.get('/auth/me'),
   googleRedirect: () => api.get('/auth/google-redirect'),
-  exchangeSession: (sessionId) => api.get(`/auth/session?session_id=${sessionId}`),
 };
 
 export const videoAPI = {
