@@ -22,6 +22,10 @@ import asyncio
 from typing import Optional
 import httpx
 
+# Configure logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
 import sys
 sys.path.append('/app/backend')
 
@@ -63,10 +67,16 @@ def get_video_processor():
 
 @api_router.post("/auth/signup")
 async def signup(request: SignupRequest, response: Response):
+    logger.info(f"Signup attempt for email: {request.email}")
+    logger.debug(f"Signup request data: {request}")
+    
     try:
         # Use Supabase Auth to sign up the user
+        logger.debug("Initializing Supabase client for signup")
         supabase = get_supabase_client()
-        auth_response = supabase.auth.sign_up({
+        logger.debug("Supabase client initialized successfully")
+        
+        signup_data = {
             "email": request.email,
             "password": request.password,
             "options": {
@@ -74,10 +84,15 @@ async def signup(request: SignupRequest, response: Response):
                     "name": request.name
                 }
             }
-        })
+        }
+        logger.debug(f"Attempting signup with data: {signup_data}")
+        
+        auth_response = supabase.auth.sign_up(signup_data)
+        logger.debug(f"Supabase signup response: {auth_response}")
         
         # Get the user data from the auth response
         user_data = auth_response.user
+        logger.debug(f"User data from signup: {user_data}")
         
         # Also store user in our users table for compatibility with existing code
         user_table_data = {
@@ -87,18 +102,24 @@ async def signup(request: SignupRequest, response: Response):
             "picture": None,
             "created_at": user_data.created_at
         }
+        logger.debug(f"Inserting user data into users table: {user_table_data}")
         
         try:
             get_supabase_client().table("users").insert(user_table_data).execute()
+            logger.debug("User data inserted into users table successfully")
         except Exception as e:
             # User might already exist in the table, which is fine
+            logger.warning(f"Failed to insert user into users table (might already exist): {str(e)}")
             pass
         
         # Create our own session token for compatibility with existing frontend
+        logger.debug(f"Creating session token for user: {user_data.id}")
         session_token = await create_session_token(user_data.id)
+        logger.debug(f"Session token created: {session_token}")
         
         # Determine if we should use secure cookies (True in production, False in development)
         is_production = not os.getenv("DEV_MODE", "false").lower() == "true"
+        logger.debug(f"Cookie settings - is_production: {is_production}")
         
         response.set_cookie(
             key="session_token",
@@ -109,6 +130,7 @@ async def signup(request: SignupRequest, response: Response):
             path="/",
             max_age=7 * 24 * 60 * 60
         )
+        logger.debug("Session cookie set successfully")
         
         # Transform user data to match existing structure
         user = {
@@ -118,40 +140,60 @@ async def signup(request: SignupRequest, response: Response):
             "picture": None,
             "created_at": user_data.created_at
         }
+        logger.debug(f"Returning user data: {user}")
         
         return {"user": user, "session_token": session_token}
     except Exception as e:
+        logger.error(f"Signup error: {str(e)}", exc_info=True)
         # Handle specific Supabase auth errors
         error_message = str(e).lower()
         if "already registered" in error_message or "email_taken" in error_message or "email already registered" in error_message:
+            logger.warning(f"Email already registered: {request.email}")
             raise HTTPException(status_code=400, detail="Email already registered")
         elif "invalid email" in error_message:
+            logger.warning(f"Invalid email address: {request.email}")
             raise HTTPException(status_code=400, detail="Invalid email address")
         elif "weak password" in error_message:
+            logger.warning(f"Weak password for email: {request.email}")
             raise HTTPException(status_code=400, detail="Password is too weak. Please use a stronger password.")
         else:
-            print(f"Signup error: {str(e)}")  # Log the actual error for debugging
+            logger.error(f"Unexpected signup error for {request.email}: {str(e)}", exc_info=True)
             raise HTTPException(status_code=500, detail=f"Signup error: {str(e)}")
 
 @api_router.post("/auth/login")
 async def login(request: LoginRequest, response: Response):
+    logger.info(f"Login attempt for email: {request.email}")
+    logger.debug(f"Login request data: {request}")
+    
     try:
         # Use Supabase Auth to sign in the user
+        logger.debug("Initializing Supabase client for login")
         supabase = get_supabase_client()
-        auth_response = supabase.auth.sign_in_with_password({
+        logger.debug("Supabase client initialized successfully")
+        
+        login_data = {
             "email": request.email,
             "password": request.password
-        })
+        }
+        logger.debug(f"Attempting login with data: {login_data}")
+        
+        auth_response = supabase.auth.sign_in_with_password(login_data)
+        logger.debug(f"Supabase login response: {auth_response}")
         
         # Get the user data from the auth response
         user_data = auth_response.user
         session_data = auth_response.session
+        logger.debug(f"User data from login: {user_data}")
+        logger.debug(f"Session data from login: {session_data}")
         
         # Create our own session token for compatibility with existing frontend
+        logger.debug(f"Creating session token for user: {user_data.id}")
         session_token = await create_session_token(user_data.id)
+        logger.debug(f"Session token created: {session_token}")
         
         # Determine if we should use secure cookies (True in production, False in development)
         is_production = not os.getenv("DEV_MODE", "false").lower() == "true"
+        logger.debug(f"Cookie settings - is_production: {is_production}")
         
         response.set_cookie(
             key="session_token",
@@ -162,6 +204,7 @@ async def login(request: LoginRequest, response: Response):
             path="/",
             max_age=7 * 24 * 60 * 60
         )
+        logger.debug("Session cookie set successfully")
         
         # Transform user data to match existing structure
         user = {
@@ -171,30 +214,42 @@ async def login(request: LoginRequest, response: Response):
             "picture": getattr(user_data, 'user_metadata', {}).get('picture'),
             "created_at": user_data.created_at
         }
+        logger.debug(f"Returning user data: {user}")
         
         return {"user": user, "session_token": session_token}
     except Exception as e:
+        logger.error(f"Login error: {str(e)}", exc_info=True)
         # Handle specific Supabase auth errors
         error_message = str(e).lower()
         if "invalid login credentials" in error_message or "invalid credentials" in error_message:
+            logger.warning(f"Invalid credentials for email: {request.email}")
             raise HTTPException(status_code=401, detail="Invalid credentials")
         elif "email not confirmed" in error_message:
+            logger.warning(f"Email not confirmed for email: {request.email}")
             raise HTTPException(status_code=401, detail="Please confirm your email address before signing in")
         else:
-            print(f"Login error: {str(e)}")  # Log the actual error for debugging
+            logger.error(f"Unexpected login error for {request.email}: {str(e)}", exc_info=True)
             raise HTTPException(status_code=500, detail=f"Authentication error: {str(e)}")
 
 @api_router.get("/auth/google-redirect")
 async def google_auth_redirect():
+    logger.info("Google auth redirect requested")
     redirect_url = f"{os.getenv('FRONTEND_URL', 'http://localhost:3000')}/dashboard"
+    logger.debug(f"Redirect URL: {redirect_url}")
+    
     # Using Supabase auth instead of Emergent
     supabase_url = os.getenv('SUPABASE_URL')
+    logger.debug(f"Supabase URL from env: {supabase_url}")
+    
     if not supabase_url:
+        logger.error("SUPABASE_URL not configured")
         raise HTTPException(status_code=500, detail="SUPABASE_URL not configured")
     
     # Ensure the URL doesn't end with a slash
     clean_supabase_url = supabase_url.rstrip('/')
     auth_url = f"{clean_supabase_url}/auth/v1/authorize?provider=google&redirect_to={redirect_url}"
+    logger.debug(f"Generated auth URL: {auth_url}")
+    
     return {"auth_url": auth_url}
 
 @api_router.get("/auth/me")
