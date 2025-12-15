@@ -63,80 +63,110 @@ def get_video_processor():
 
 @api_router.post("/auth/signup")
 async def signup(request: SignupRequest, response: Response):
-    # Check if user already exists
     try:
-        user_response = get_supabase_client().table("users").select("*").eq("email", request.email).execute()
-        if user_response.data:
+        # Use Supabase Auth to sign up the user
+        supabase = get_supabase_client()
+        auth_response = supabase.auth.sign_up({
+            "email": request.email,
+            "password": request.password,
+            "options": {
+                "data": {
+                    "name": request.name
+                }
+            }
+        })
+        
+        # Get the user data from the auth response
+        user_data = auth_response.user
+        
+        # Also store user in our users table for compatibility with existing code
+        user_table_data = {
+            "id": user_data.id,
+            "email": user_data.email,
+            "name": request.name,
+            "picture": None,
+            "created_at": user_data.created_at
+        }
+        
+        try:
+            get_supabase_client().table("users").insert(user_table_data).execute()
+        except Exception as e:
+            # User might already exist in the table, which is fine
+            pass
+        
+        # Create our own session token for compatibility with existing frontend
+        session_token = await create_session_token(user_data.id)
+        
+        response.set_cookie(
+            key="session_token",
+            value=session_token,
+            httponly=True,
+            secure=True,
+            samesite="none",
+            path="/",
+            max_age=7 * 24 * 60 * 60
+        )
+        
+        # Transform user data to match existing structure
+        user = {
+            "user_id": user_data.id,
+            "email": user_data.email,
+            "name": request.name,
+            "picture": None,
+            "created_at": user_data.created_at
+        }
+        
+        return {"user": user, "session_token": session_token}
+    except Exception as e:
+        # Handle specific Supabase auth errors
+        if "already registered" in str(e).lower() or "email_taken" in str(e).lower():
             raise HTTPException(status_code=400, detail="Email already registered")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
-    
-    user_id = f"user_{uuid.uuid4().hex[:12]}"
-    # Note: In a real implementation, Supabase would handle password hashing
-    
-    user_data = {
-        "id": user_id,
-        "email": request.email,
-        "name": request.name,
-        "picture": None,
-        "created_at": datetime.now(timezone.utc).isoformat()
-    }
-    
-    try:
-        response = get_supabase_client().table("users").insert(user_data).execute()
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to create user: {str(e)}")
-    
-    session_token = await create_session_token(user_id)
-    
-    response.set_cookie(
-        key="session_token",
-        value=session_token,
-        httponly=True,
-        secure=True,
-        samesite="none",
-        path="/",
-        max_age=7 * 24 * 60 * 60
-    )
-    
-    # Get the created user
-    try:
-        user_response = get_supabase_client().table("users").select("*").eq("id", user_id).execute()
-        user = user_response.data[0] if user_response.data else None
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve user: {str(e)}")
-    
-    return {"user": user, "session_token": session_token}
+        else:
+            raise HTTPException(status_code=500, detail=f"Signup error: {str(e)}")
 
 @api_router.post("/auth/login")
 async def login(request: LoginRequest, response: Response):
-    # In a real implementation, Supabase would handle authentication
-    # This is a simplified version for demonstration
     try:
-        user_response = get_supabase_client().table("users").select("*").eq("email", request.email).execute()
-        if not user_response.data:
-            raise HTTPException(status_code=401, detail="Invalid credentials")
+        # Use Supabase Auth to sign in the user
+        supabase = get_supabase_client()
+        auth_response = supabase.auth.sign_in_with_password({
+            "email": request.email,
+            "password": request.password
+        })
         
-        user_doc = user_response.data[0]
-        # Note: In a real implementation, password verification would be done by Supabase
+        # Get the user data from the auth response
+        user_data = auth_response.user
+        session_data = auth_response.session
+        
+        # Create our own session token for compatibility with existing frontend
+        session_token = await create_session_token(user_data.id)
+        
+        response.set_cookie(
+            key="session_token",
+            value=session_token,
+            httponly=True,
+            secure=True,
+            samesite="none",
+            path="/",
+            max_age=7 * 24 * 60 * 60
+        )
+        
+        # Transform user data to match existing structure
+        user = {
+            "user_id": user_data.id,
+            "email": user_data.email,
+            "name": getattr(user_data, 'user_metadata', {}).get('name', ''),
+            "picture": getattr(user_data, 'user_metadata', {}).get('picture'),
+            "created_at": user_data.created_at
+        }
+        
+        return {"user": user, "session_token": session_token}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
-    
-    session_token = await create_session_token(user_doc["id"])
-    
-    response.set_cookie(
-        key="session_token",
-        value=session_token,
-        httponly=True,
-        secure=True,
-        samesite="none",
-        path="/",
-        max_age=7 * 24 * 60 * 60
-    )
-    
-    user = {k: v for k, v in user_doc.items() if k != "password_hash"}
-    
-    return {"user": user, "session_token": session_token}
+        # Handle specific Supabase auth errors
+        if "Invalid login credentials" in str(e):
+            raise HTTPException(status_code=401, detail="Invalid credentials")
+        else:
+            raise HTTPException(status_code=500, detail=f"Authentication error: {str(e)}")
 
 @api_router.get("/auth/google-redirect")
 async def google_auth_redirect():

@@ -97,6 +97,7 @@ async def get_current_user(session_token: Optional[str] = Cookie(None), authoriz
 
 
 # These functions are kept for compatibility but won't be used with Supabase Auth
+# Supabase handles password hashing and verification automatically through its auth system
 async def hash_password(password: str) -> str:
     """Hash a password - in Supabase this is typically handled by the service"""
     # Note: Supabase handles password hashing automatically
