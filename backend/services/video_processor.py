@@ -20,16 +20,20 @@ class VideoProcessorService:
         self.nlp_service = NLPAnalysisService()
     
     async def update_job_status(self, job_id: str, status: str, progress: float, step: str, extra_fields: dict | None = None):
-        # Mock implementation - in a real application, you would update a database
+        # In a real application, you would update a database
+        # For now, we'll just log the update
         print(f"Updating job {job_id} status: {status}, progress: {progress}%, step: {step}")
+        if extra_fields:
+            print(f"Extra fields: {extra_fields}")
     
     async def process_video(self, job_id: str, video_id: str, user_id: str):
         try:
             await self.update_job_status(job_id, "transcribing", 10, "Extracting audio...")
             
+            # Get video from storage
             video_data = get_video_from_storage(video_id)
             
-            # Mock video metadata
+            # Get video metadata
             content_type = video_data.get("content_type", "video/mp4")
             filename = video_data.get("filename", "video.mp4")
             
@@ -50,18 +54,13 @@ class VideoProcessorService:
             
             print(f"Processing video: {video_path}, content_type: {content_type}, filename: {filename}")
             
-            # Mock audio extraction
-            audio_path = video_path.replace(suffix, ".wav")
-            with open(audio_path, "w") as f:
-                f.write("mock audio content")
+            # Extract audio from video
+            audio_path = await self.transcription_service.extract_audio_from_video(video_path, content_type)
             
             await self.update_job_status(job_id, "transcribing", 20, "Transcribing speech...")
-            # Mock transcription result
-            transcription_result = {
-                "text": "This is a mock transcription of the video content.",
-                "words": [],
-                "duration": 180
-            }
+            
+            # Transcribe audio
+            transcription_result = await self.transcription_service.transcribe_audio(audio_path)
             
             transcript = transcription_result["text"]
             words = transcription_result.get("words", [])
@@ -69,46 +68,46 @@ class VideoProcessorService:
             
             await self.update_job_status(job_id, "audio_analysis", 35, "Analyzing speech patterns...")
             
-            # Mock audio analysis
+            # Analyze audio metrics
+            speaking_rate_analysis = self.audio_service.analyze_speaking_rate(transcript, duration)
+            pauses_analysis = self.audio_service.detect_pauses(words)
+            filler_words_analysis = self.audio_service.detect_filler_words(transcript, words)
+            vocal_metrics_analysis = await self.audio_service.analyze_vocal_metrics(audio_path)
+            sentence_clarity_analysis = self.audio_service.analyze_sentence_clarity(transcript)
+            
             communication_metrics = {
-                "speaking_rate": {"rate": 150, "assessment": "good"},
-                "pauses": {"count": 5, "distribution": "even"},
-                "filler_words": {"count": 3, "types": ["um", "uh"]},
-                "vocal_metrics": {"pitch_variation": "moderate", "volume_consistency": "good"},
-                "sentence_clarity": {"score": 85, "feedback": "Clear articulation"}
+                "speaking_rate": speaking_rate_analysis,
+                "pauses": {
+                    "detected": pauses_analysis,
+                    "count": len(pauses_analysis),
+                    "average_gap": sum(p["duration"] for p in pauses_analysis) / len(pauses_analysis) if pauses_analysis else 0
+                },
+                "filler_words": filler_words_analysis,
+                "vocal_metrics": vocal_metrics_analysis,
+                "sentence_clarity": {
+                    "analysis": sentence_clarity_analysis,
+                    "total_sentences": len(sentence_clarity_analysis)
+                }
             }
             
             await self.update_job_status(job_id, "video_analysis", 50, "Analyzing visual presence...")
             
-            # Mock vision analysis
-            presence_metrics = {
-                "posture_score": 80,
-                "eye_contact_ratio": 0.75,
-                "facial_expressions": {"smile_frequency": 0.3, "expression_variety": "moderate"},
-                "gesture_rate": 12,
-                "first_impression_score": 82
-            }
+            # Analyze visual presence
+            frames = self.vision_service.extract_frames(video_path)
+            presence_metrics = await self.vision_service.analyze_with_gpt4o(frames)
             
             await self.update_job_status(job_id, "nlp_analysis", 70, "Analyzing leadership signals...")
             
-            # Mock user profile
+            # Get user profile (in a real implementation, this would come from the database)
             user_profile = {}
             
-            # Mock NLP analysis
-            gravitas_analysis = {
-                "overall_gravitas": 78,
-                "confidence_indicators": ["clear tone", "measured pace"],
-                "authority_indicators": ["declarative statements", "expert vocabulary"]
-            }
-            
-            storytelling_analysis = {
-                "narrative_structure": "present",
-                "emotional_engagement": "moderate",
-                "memorable_elements": ["key_points", "conclusion"]
-            }
+            # Analyze gravitas and storytelling
+            gravitas_analysis = await self.nlp_service.analyze_gravitas(transcript, user_profile)
+            storytelling_analysis = await self.nlp_service.analyze_storytelling(transcript, user_profile)
             
             await self.update_job_status(job_id, "scoring", 85, "Calculating scores...")
             
+            # Calculate scores
             scores = self._calculate_scores(
                 communication_metrics,
                 presence_metrics,
@@ -124,13 +123,10 @@ class VideoProcessorService:
                 "scores": scores
             }
             
-            # Mock coaching tips
-            coaching_tips = [
-                "Work on maintaining consistent eye contact throughout your presentation",
-                "Try to reduce filler words by pausing instead of saying 'um' or 'uh'",
-                "Consider varying your vocal tone to maintain audience engagement"
-            ]
+            # Generate coaching tips
+            coaching_tips = await self.nlp_service.generate_coaching_tips(all_metrics)
             
+            # Create report
             report_id = f"report_{uuid.uuid4().hex}"
             report_doc = {
                 "id": report_id,
@@ -159,6 +155,8 @@ class VideoProcessorService:
             
         except Exception as e:
             print(f"Video processing failed: {str(e)}")
+            # Update job status to failed
+            await self.update_job_status(job_id, "failed", 0, f"Processing failed: {str(e)}")
             raise e
     
     def _calculate_scores(self, comm_metrics, presence_metrics, gravitas_analysis, storytelling_analysis):
