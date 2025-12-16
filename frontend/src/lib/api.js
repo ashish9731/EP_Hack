@@ -43,6 +43,7 @@ export const api = axios.create({
 api.interceptors.response.use((response) => {
   console.log('API Response:', response); // Debug log
   if (response.data?.session_token) {
+    // Store in localStorage as backup, but rely on cookies for authentication
     localStorage.setItem('session_token', response.data.session_token);
   }
   return response;
@@ -51,13 +52,8 @@ api.interceptors.response.use((response) => {
   return Promise.reject(error);
 });
 
-// Add session token and device fingerprint to requests
+// Add device fingerprint to requests
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('session_token');
-  if (token) {
-    config.headers['Authorization'] = `Bearer ${token}`;
-  }
-  
   // Add device fingerprint
   const fingerprint = getDeviceFingerprint();
   config.headers['X-Device-Fingerprint'] = fingerprint;
