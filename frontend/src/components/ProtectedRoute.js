@@ -9,7 +9,11 @@ export const ProtectedRoute = ({ children }) => {
   const navigate = useNavigate();
   
   useEffect(() => {
+    console.log('ProtectedRoute: Checking authentication status');
+    console.log('Location state:', location.state);
+    
     if (location.state?.user) {
+      console.log('Using user from location state:', location.state.user);
       setUser(location.state.user);
       setIsAuthenticated(true);
       return;
@@ -17,10 +21,18 @@ export const ProtectedRoute = ({ children }) => {
     
     const checkAuth = async () => {
       try {
+        console.log('Calling authAPI.getMe() to check authentication');
         const response = await authAPI.getMe();
+        console.log('Received response from getMe:', response);
         setUser(response.data);
         setIsAuthenticated(true);
       } catch (error) {
+        console.error('ProtectedRoute: Authentication check failed:', error);
+        console.error('Error details:', {
+          message: error.message,
+          response: error.response,
+          request: error.request
+        });
         setIsAuthenticated(false);
       }
     };

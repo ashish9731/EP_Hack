@@ -35,16 +35,24 @@ const Login = () => {
   const handleGoogleLogin = async () => {
     console.log('Google login clicked'); // Debug log
     try {
+      console.log('Calling authAPI.googleRedirect()');
       const response = await authAPI.googleRedirect();
-      console.log('Google redirect response:', response); // Debug log
+      console.log('Google redirect response received:', response); // Debug log
       if (response.data?.auth_url) {
+        console.log('Redirecting to auth URL:', response.data.auth_url);
         window.location.href = response.data.auth_url;
       } else {
-        toast.error('Failed to initiate Google login');
+        console.error('No auth_url in response:', response);
+        toast.error('Failed to initiate Google login - missing auth URL');
       }
     } catch (error) {
       console.error('Google login error:', error); // Debug log
-      toast.error('Failed to initiate Google login');
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response,
+        request: error.request
+      });
+      toast.error('Failed to initiate Google login: ' + (error.response?.data?.detail || error.message));
     }
   };
   

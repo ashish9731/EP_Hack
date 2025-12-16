@@ -13,8 +13,14 @@ sys.path.insert(0, os.getcwd())
 sys.path.insert(0, os.path.join(os.getcwd(), 'backend'))
 
 # Load environment variables
-ROOT_DIR = Path(__file__).parent
-load_dotenv(ROOT_DIR / '.env')
+ROOT_DIR = Path(__file__).parent.parent  # Go up one level to the project root
+env_path = ROOT_DIR / '.env'
+load_dotenv(env_path)
+
+# Debug print to check if env vars are loaded
+print(f"DEBUG: Looking for .env file at: {env_path}")
+print(f"DEBUG: SUPABASE_URL from env: {os.getenv('SUPABASE_URL')}")
+print(f"DEBUG: SUPABASE_KEY from env: {os.getenv('SUPABASE_KEY')[:10] if os.getenv('SUPABASE_KEY') else None}")
 
 # Import Supabase client after loading environment variables
 from utils.supabase_client import get_supabase_client
@@ -52,8 +58,8 @@ from routes.coaching import create_coaching_router
 from routes.sharing import create_sharing_router
 from services.video_retention import create_retention_router, VideoRetentionService
 
-ROOT_DIR = Path(__file__).parent
-load_dotenv(ROOT_DIR / '.env')
+# Environment variables already loaded at the top of the file
+pass
 
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
@@ -108,12 +114,15 @@ async def signup(request: SignupRequest, response: Response):
         # Create our own session token for compatibility with existing frontend
         session_token = str(uuid.uuid4())
         
+        # Check if we're in development mode
+        is_production = not os.getenv("DEV_MODE", "false").lower() == "true"
+        
         response.set_cookie(
             key="session_token",
             value=session_token,
             httponly=True,
-            secure=True,
-            samesite="none",
+            secure=is_production,  # Only secure in production
+            samesite="lax" if not is_production else "none",  # Lax in development, none in production
             path="/",
             max_age=7 * 24 * 60 * 60
         )
@@ -140,11 +149,14 @@ async def signup(request: SignupRequest, response: Response):
 @api_router.post("/auth/login")
 async def login(request: LoginRequest, response: Response):
     logger.info(f"Login attempt for email: {request.email}")
+    print(f"DEBUG: Login attempt for email: {request.email}")  # Debug print
     
     try:
         # Import Supabase client
         from utils.supabase_client import get_supabase_client
         supabase = get_supabase_client()
+        
+        print(f"DEBUG: Attempting Supabase login for {request.email}")  # Debug print
         
         # Use Supabase Auth to sign in the user
         auth_response = supabase.auth.sign_in_with_password({
@@ -152,19 +164,30 @@ async def login(request: LoginRequest, response: Response):
             "password": request.password
         })
         
+        print(f"DEBUG: Supabase login successful for {request.email}")  # Debug print
+        print(f"DEBUG: Auth response: {auth_response}")  # Debug print
+        
         # Get the user data from the auth response
         user_data = auth_response.user
         session_data = auth_response.session
         
+        print(f"DEBUG: User data: {user_data}")  # Debug print
+        print(f"DEBUG: Session data: {session_data}")  # Debug print
+        
         # Create our own session token for compatibility with existing frontend
         session_token = str(uuid.uuid4())
+        
+        print(f"DEBUG: Generated session token: {session_token}")  # Debug print
+        
+        # Check if we're in development mode
+        is_production = not os.getenv("DEV_MODE", "false").lower() == "true"
         
         response.set_cookie(
             key="session_token",
             value=session_token,
             httponly=True,
-            secure=True,
-            samesite="none",
+            secure=is_production,  # Only secure in production
+            samesite="lax" if not is_production else "none",  # Lax in development, none in production
             path="/",
             max_age=7 * 24 * 60 * 60
         )
@@ -178,9 +201,12 @@ async def login(request: LoginRequest, response: Response):
             "created_at": user_data.created_at
         }
         
+        print(f"DEBUG: Returning user data: {user}")  # Debug print
+        
         return {"user": user, "session_token": session_token}
         
     except Exception as e:
+        print(f"DEBUG: Login error: {str(e)}")  # Debug print
         # Handle specific Supabase auth errors
         if "Invalid login credentials" in str(e):
             raise HTTPException(status_code=401, detail="Invalid credentials")
@@ -191,14 +217,19 @@ async def login(request: LoginRequest, response: Response):
 @api_router.get("/auth/google-redirect")
 async def google_auth_redirect():
     logger.info("Google auth redirect requested")
+    print("DEBUG: Google auth redirect requested")  # Debug print
     
     # Import Supabase client
     from utils.supabase_client import get_supabase_client
     supabase = get_supabase_client()
     
+    print("DEBUG: Supabase client initialized")  # Debug print
+    
     # Generate the Google OAuth URL
     try:
         redirect_url = f"{os.getenv('FRONTEND_URL', 'http://localhost:3000')}/auth/callback"
+        print(f"DEBUG: Redirect URL: {redirect_url}")  # Debug print
+        
         oauth_response = supabase.auth.sign_in_with_oauth({
             "provider": "google",
             "options": {
@@ -206,32 +237,37 @@ async def google_auth_redirect():
             }
         })
         
+        print(f"DEBUG: OAuth response: {oauth_response}")  # Debug print
+        
         # Extract the authorization URL from the response
         auth_url = oauth_response.url
+        
+        print(f"DEBUG: Auth URL: {auth_url}")  # Debug print
         
         logger.info(f"Generated Google auth URL: {auth_url}")
         return {"auth_url": auth_url}
     except Exception as e:
+        print(f"DEBUG: Google auth redirect error: {str(e)}")  # Debug print
         logger.error(f"Google auth redirect error: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Authentication error: {str(e)}")
 
 async def get_current_user(session_token: Optional[str] = Cookie(None), authorization: Optional[str] = Header(None)):
+    print(f"DEBUG: get_current_user called with session_token: {session_token}, authorization: {authorization}")  # Debug print
     # Import the real authentication function
     from utils.supabase_auth import get_current_user as supabase_get_user
     try:
         # Use the real Supabase authentication
+        print("DEBUG: Calling supabase_get_user")  # Debug print
         user = await supabase_get_user(session_token, authorization)
+        print(f"DEBUG: Supabase user authentication successful: {user}")  # Debug print
         return user
     except Exception as e:
-        # If authentication fails, we'll still return a mock user for demo purposes
-        # In a production environment, this would raise an HTTP 401 error
-        logger.warning(f"Authentication failed, using demo user: {str(e)}")
-        return {
-            "user_id": "demo_user_123",
-            "email": "demo@example.com",
-            "name": "Demo User",
-            "created_at": datetime.now(timezone.utc).isoformat()
-        }
+        print(f"DEBUG: Authentication failed: {str(e)}")  # Debug print
+        # In a production environment, this should raise an HTTP 401 error
+        # For development, we'll still return a mock user but with a flag to indicate it's not real
+        logger.warning(f"Authentication failed: {str(e)}")
+        # Raise the exception to properly handle unauthenticated requests
+        raise HTTPException(status_code=401, detail="Not authenticated")
 
 @api_router.get("/auth/me")
 async def get_me(session_token: Optional[str] = Cookie(None), authorization: Optional[str] = Header(None)):
@@ -557,4 +593,4 @@ async def get_simulator_scenarios(
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=5000, log_level="info")
+    uvicorn.run(app, host="0.0.0.0", port=5001, log_level="info")

@@ -42,13 +42,23 @@ api.interceptors.request.use((config) => {
 });
 
 export const authAPI = {
-  signup: (data) => api.post('/auth/signup', data),
-  login: (data) => api.post('/auth/login', data),
+  signup: (data) => {
+    console.log('Calling signup API with data:', data);
+    return api.post('/auth/signup', data);
+  },
+  login: (data) => {
+    console.log('Calling login API with data:', data);
+    return api.post('/auth/login', data);
+  },
   logout: () => {
+    console.log('Calling logout API');
     localStorage.removeItem('session_token');
     return api.post('/auth/logout');
   },
-  getMe: () => api.get('/auth/me'),
+  getMe: () => {
+    console.log('Calling getMe API');
+    return api.get('/auth/me');
+  },
   googleRedirect: () => {
     console.log('Calling googleRedirect API'); // Debug log
     return api.get('/auth/google-redirect');

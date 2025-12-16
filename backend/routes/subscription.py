@@ -110,7 +110,7 @@ def get_subscription_routes(supabase):
         authorization: Optional[str] = Header(None),
         device_fingerprint: Optional[str] = Header(None, alias="X-Device-Fingerprint")
     ):
-        user = get_current_user(session_token, authorization)
+        user = await get_current_user(session_token, authorization)
         
         try:
             # Get Supabase client
@@ -147,7 +147,7 @@ def get_subscription_routes(supabase):
         session_token: Optional[str] = Cookie(None),
         authorization: Optional[str] = Header(None)
     ):
-        user = get_current_user(session_token, authorization)
+        user = await get_current_user(session_token, authorization)
         
         if request.tier not in SUBSCRIPTION_TIERS:
             raise HTTPException(status_code=400, detail="Invalid subscription tier")
