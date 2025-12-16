@@ -7,7 +7,7 @@ from datetime import datetime, timezone, timedelta
 from pydantic import BaseModel
 import uuid
 
-router = APIRouter()
+router = APIRouter(prefix="/api")
 
 # Whitelisted emails with permanent Pro access
 WHITELISTED_EMAILS = [
@@ -102,7 +102,7 @@ async def check_subscription_status(user_id: str, user_email: str, supabase_clie
         }
 
 def get_subscription_routes(supabase):
-    from utils.auth import get_current_user
+    from utils.supabase_auth import get_current_user
     
     @router.get("/subscription/status")
     async def get_subscription_status(
@@ -114,7 +114,7 @@ def get_subscription_routes(supabase):
         
         try:
             # Get Supabase client
-            supabase_client = supabase()
+            supabase_client = supabase
             
             # Check subscription status
             subscription = await check_subscription_status(user["user_id"], user["email"], supabase_client)
@@ -154,7 +154,7 @@ def get_subscription_routes(supabase):
         
         try:
             # Get Supabase client
-            supabase_client = supabase()
+            supabase_client = supabase
             
             # Deactivate any existing active subscriptions
             supabase_client.table("subscriptions").update({"status": "cancelled"}).eq("user_id", user["user_id"]).eq("status", "active").execute()
