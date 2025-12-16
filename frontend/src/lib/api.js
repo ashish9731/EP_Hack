@@ -2,7 +2,32 @@ import axios from 'axios';
 import { getDeviceFingerprint } from './deviceFingerprint';
 
 // Dynamically determine backend URL based on current domain
-const API_URL = process.env.REACT_APP_BACKEND_URL || (typeof window !== 'undefined' ? window.location.origin.replace(':3000', ':5001') : '');
+const getApiUrl = () => {
+  // If we have a specific backend URL in env vars, use it
+  if (process.env.REACT_APP_BACKEND_URL) {
+    return process.env.REACT_APP_BACKEND_URL;
+  }
+  
+  // For local development
+  if (typeof window !== 'undefined') {
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      return 'http://localhost:5001';
+    }
+    
+    // For production, use the production backend URL if available
+    if (process.env.REACT_APP_PROD_BACKEND_URL) {
+      return process.env.REACT_APP_PROD_BACKEND_URL;
+    }
+    
+    // Fallback - this shouldn't happen in a proper deployment
+    console.warn('No backend URL configured!');
+    return '';
+  }
+  
+  return '';
+};
+
+const API_URL = getApiUrl();
 
 console.log('API URL:', API_URL); // Debug log
 
