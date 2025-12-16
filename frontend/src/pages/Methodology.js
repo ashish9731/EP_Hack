@@ -75,7 +75,7 @@ const Methodology = () => {
       name: 'Video Upload', 
       icon: Video, 
       description: 'You upload or record a 2-4 minute video of yourself speaking',
-      tech: 'Secure upload to encrypted cloud storage with GridFS'
+      tech: 'Secure upload to encrypted cloud storage with Supabase'
     },
     { 
       step: 2, 

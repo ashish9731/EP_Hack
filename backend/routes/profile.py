@@ -6,9 +6,6 @@ import uuid
 from models.profile import ProfileCreateRequest, UserProfile
 from utils.auth import get_current_user
 
-# Mock storage for user profiles
-user_profiles = {}
-
 def create_profile_router(supabase):
     router = APIRouter(prefix="/profile", tags=["profile"])
     
@@ -20,27 +17,32 @@ def create_profile_router(supabase):
     ):
         user = get_current_user(session_token, authorization)
         
-        # Check if profile exists
-        existing_profile = user_profiles.get(user["user_id"])
-        
-        now = datetime.now(timezone.utc).isoformat()
-        profile_data = {
-            "id": str(uuid.uuid4()),
-            "user_id": user["user_id"],
-            "role": request.role,
-            "seniority_level": request.seniority_level,
-            "years_experience": request.years_experience,
-            "industry": request.industry,
-            "company_size": request.company_size,
-            "primary_goal": request.primary_goal,
-            "created_at": now,
-            "updated_at": now
-        }
-        
-        # Save profile
-        user_profiles[user["user_id"]] = profile_data
-        
-        return profile_data
+        try:
+            # Get Supabase client
+            supabase_client = supabase()
+            
+            now = datetime.now(timezone.utc).isoformat()
+            
+            # Prepare profile data
+            profile_data = {
+                "id": user["user_id"],
+                "first_name": request.first_name,
+                "last_name": request.last_name,
+                "company": request.company,
+                "role": request.role,
+                "industry": request.industry,
+                "experience_level": request.experience_level,
+                "communication_goals": request.communication_goals,
+                "updated_at": now
+            }
+            
+            # Save profile to Supabase
+            response = supabase_client.table("profiles").upsert(profile_data).execute()
+            
+            return response.data[0] if response.data else profile_data
+            
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to create profile: {str(e)}")
     
     @router.get("/")
     async def get_profile(
@@ -49,11 +51,21 @@ def create_profile_router(supabase):
     ):
         user = get_current_user(session_token, authorization)
         
-        profile = user_profiles.get(user["user_id"])
-        
-        if not profile:
-            return {"has_profile": False}
-        
-        return {"has_profile": True, "profile": profile}
+        try:
+            # Get Supabase client
+            supabase_client = supabase()
+            
+            # Query profile from Supabase
+            response = supabase_client.table("profiles").select("*").eq("id", user["user_id"]).execute()
+            
+            if not response.data:
+                raise HTTPException(status_code=404, detail="Profile not found")
+            
+            return response.data[0]
+            
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to get profile: {str(e)}")
     
     return router

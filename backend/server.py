@@ -33,7 +33,7 @@ from models.user import UserCreate, User, LoginRequest, SignupRequest, AuthRespo
 from models.video import JobStatus, VideoMetadata, EPReport
 from models.profile import ProfileCreateRequest, UserProfile
 from utils.auth import create_user, get_user_by_email, verify_password
-from utils.gridfs_helper import save_video_to_storage, get_video_from_storage
+from utils.supabase_storage import save_video_to_storage, get_video_from_storage
 from services.video_processor import VideoProcessorService
 from routes.profile import create_profile_router
 from routes.subscription import get_subscription_routes
@@ -253,13 +253,14 @@ async def upload_video(
 ):
     user = await get_current_user(session_token, authorization)
     
-    if file.size and file.size > 200 * 1024 * 1024:
-        raise HTTPException(status_code=400, detail="Video size exceeds 200MB limit")
+    # Allow larger video files - up to 1GB
+    if file.size and file.size > 1024 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="Video size exceeds 1GB limit")
     
     # Save video to storage
     try:
-        from utils.gridfs_helper import save_video_to_storage
-        video_id = save_video_to_storage(file, user["user_id"])
+        from utils.supabase_storage import save_video_to_storage
+        video_id = await save_video_to_storage(file, user["user_id"])
         logger.info(f"Video uploaded successfully: {video_id}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to save video: {str(e)}")
@@ -307,7 +308,7 @@ async def process_video(
     
     return {"job_id": job_id, "message": "Video processing started"}
 
-@api_router.get("/jobs/{job_id}/status")
+@app.get("/api/jobs/{job_id}/status")
 async def get_job_status(
     job_id: str,
     session_token: Optional[str] = Cookie(None),
@@ -315,22 +316,26 @@ async def get_job_status(
 ):
     user = await get_current_user(session_token, authorization)
     
-    # In a real implementation, this would query the database for the actual job status
-    # For now, we'll return a mock status but with a realistic structure
-    job = {
-        "id": job_id,
-        "user_id": user["user_id"],
-        "status": "completed",
-        "progress": 100,
-        "current_step": "Analysis complete",
-        "created_at": datetime.now(timezone.utc).isoformat(),
-        "updated_at": datetime.now(timezone.utc).isoformat()
-    }
-    
-    logger.info(f"Returning job status: {job}")
-    return job
+    try:
+        # Get Supabase client
+        from utils.supabase_client import get_supabase_client
+        supabase = get_supabase_client()
+        
+        # Query the database for the actual job status
+        response = supabase.table("jobs").select("*").eq("id", job_id).eq("user_id", user["user_id"]).execute()
+        
+        if not response.data:
+            raise HTTPException(status_code=404, detail="Job not found")
+        
+        job = response.data[0]
+        logger.info(f"Returning job status: {job}")
+        return job
+        
+    except Exception as e:
+        logger.error(f"Failed to get job status: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to get job status: {str(e)}")
 
-@api_router.get("/reports/{report_id}")
+@app.get("/api/reports/{report_id}")
 async def get_report(
     report_id: str,
     session_token: Optional[str] = Cookie(None),
@@ -338,56 +343,47 @@ async def get_report(
 ):
     user = await get_current_user(session_token, authorization)
     
-    # In a real implementation, this would query the database for the actual report
-    # For now, we'll return a mock report but with a realistic structure that matches
-    # what the real video processor would generate
-    report = {
-        "id": report_id,
-        "user_id": user["user_id"],
-        "created_at": datetime.now(timezone.utc).isoformat(),
-        "overall_score": 85,
-        "gravitas_score": 80,
-        "communication_score": 85,
-        "presence_score": 82,
-        "storytelling_score": 78,
-        "transcript": "This is a sample transcript of the analyzed video.",
-        "feedback": {
-            "gravitas": "Good demonstration of authority and confidence.",
-            "communication": "Clear articulation and appropriate pace.",
-            "presence": "Strong eye contact and commanding posture.",
-            "storytelling": "Effective use of narrative to engage the audience."
-        },
-        "recommendations": ["Improve eye contact", "Work on posture"]
-    }
-    
-    logger.info(f"Returning report: {report}")
-    return report
+    try:
+        # Get Supabase client
+        from utils.supabase_client import get_supabase_client
+        supabase = get_supabase_client()
+        
+        # Query the database for the actual report
+        response = supabase.table("reports").select("*").eq("id", report_id).eq("user_id", user["user_id"]).execute()
+        
+        if not response.data:
+            raise HTTPException(status_code=404, detail="Report not found")
+        
+        report = response.data[0]
+        logger.info(f"Returning report: {report}")
+        return report
+        
+    except Exception as e:
+        logger.error(f"Failed to get report: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to get report: {str(e)}")
 
-@api_router.get("/reports")
+@app.get("/api/reports")
 async def list_reports(
     session_token: Optional[str] = Cookie(None),
     authorization: Optional[str] = Header(None)
 ):
     user = await get_current_user(session_token, authorization)
     
-    # In a real implementation, this would query the database for the user's reports
-    # For now, we'll return a mock reports list but with a realistic structure
-    reports = [
-        {
-            "id": f"report_{uuid.uuid4().hex}",
-            "user_id": user["user_id"],
-            "created_at": datetime.now(timezone.utc).isoformat(),
-            "overall_score": 85,
-            "gravitas_score": 80,
-            "communication_score": 85,
-            "presence_score": 82,
-            "storytelling_score": 78,
-            "title": "Initial Assessment"
-        }
-    ]
-    
-    logger.info(f"Returning reports list with {len(reports)} items")
-    return {"reports": reports}
+    try:
+        # Get Supabase client
+        from utils.supabase_client import get_supabase_client
+        supabase = get_supabase_client()
+        
+        # Query the database for the user's reports
+        response = supabase.table("reports").select("*").eq("user_id", user["user_id"]).order("created_at", desc=True).execute()
+        
+        reports = response.data if response.data else []
+        logger.info(f"Returning reports list with {len(reports)} items")
+        return {"reports": reports}
+        
+    except Exception as e:
+        logger.error(f"Failed to list reports: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to list reports: {str(e)}")
 
 @api_router.get("/videos/{video_id}/stream")
 async def stream_video(
@@ -397,18 +393,23 @@ async def stream_video(
 ):
     user = await get_current_user(session_token, authorization)
     
-    # In a real implementation, this would stream the actual video from storage
-    # For now, we'll return a mock response but with a realistic structure
-    logger.info(f"Streaming video: {video_id}")
-    return {"message": "Video streaming endpoint", "video_id": video_id}
+    try:
+        # Get signed URL from Supabase storage
+        from utils.supabase_storage import get_signed_url
+        signed_url = get_signed_url(video_id, expires_in=3600)  # URL expires in 1 hour
+        
+        return {"url": signed_url, "video_id": video_id}
+    except Exception as e:
+        logger.error(f"Failed to stream video {video_id}: {str(e)}")
+        raise HTTPException(status_code=404, detail="Video not found")
 
 # Add the rest of the routes
 app.include_router(api_router)
-app.include_router(create_profile_router(lambda: None))  # Mock database client
-app.include_router(get_subscription_routes(lambda: None))  # Mock database client
-app.include_router(create_coaching_router(lambda: None))  # Mock database client
-app.include_router(create_sharing_router(lambda: None))  # Mock database client
-app.include_router(create_retention_router(lambda: None))  # Mock database client
+app.include_router(create_profile_router(get_supabase_client))
+app.include_router(get_subscription_routes(get_supabase_client))
+app.include_router(create_coaching_router(get_supabase_client))
+app.include_router(create_sharing_router(get_supabase_client))
+app.include_router(create_retention_router(get_supabase_client))
 
 # CORS middleware
 # Get frontend URL from environment variable, fallback to localhost for development
@@ -471,7 +472,7 @@ async def get_ted_talks(
     authorization: Optional[str] = Header(None)
 ):
     await get_current_user(session_token, authorization)
-    # Mock TED talks data
+    # Return list of available TED talks
     ted_talks = [
         {
             "id": "1",
@@ -480,6 +481,22 @@ async def get_ted_talks(
             "duration": "9:59",
             "views": "25M",
             "link": "https://www.ted.com/talks/julian_treasure_how_to_speak_so_that_people_want_to_listen"
+        },
+        {
+            "id": "2",
+            "title": "The power of vulnerability",
+            "speaker": "Brené Brown",
+            "duration": "20:02",
+            "views": "15M",
+            "link": "https://www.ted.com/talks/brene_brown_the_power_of_vulnerability"
+        },
+        {
+            "id": "3",
+            "title": "How great leaders inspire action",
+            "speaker": "Simon Sinek",
+            "duration": "18:05",
+            "views": "12M",
+            "link": "https://www.ted.com/talks/simon_sinek_how_great_leaders_inspire_action"
         }
     ]
     return ted_talks
@@ -492,8 +509,30 @@ async def get_training_modules(
     await get_current_user(session_token, authorization)
     # Return list of available training modules
     modules = [
-        {"id": "strategic-pauses", "title": "Strategic Pauses", "duration": "3 min"},
-        {"id": "lens-eye-contact", "title": "Lens Eye Contact", "duration": "4 min"}
+        {
+            "id": "strategic-pauses", 
+            "title": "Strategic Pauses", 
+            "duration": "3 min",
+            "description": "Learn techniques to project confidence through your voice, including pace, tone, and strategic pauses.",
+            "focus_area": "Communication",
+            "difficulty": "Beginner"
+        },
+        {
+            "id": "lens-eye-contact", 
+            "title": "Lens Eye Contact", 
+            "duration": "4 min",
+            "description": "Develop your body language toolkit with posture, gestures, and spatial awareness techniques.",
+            "focus_area": "Presence",
+            "difficulty": "Intermediate"
+        },
+        {
+            "id": "storytelling-framework", 
+            "title": "Strategic Storytelling Framework", 
+            "duration": "5 min",
+            "description": "Craft compelling narratives that drive action and create emotional connections with stakeholders.",
+            "focus_area": "Storytelling",
+            "difficulty": "Advanced"
+        }
     ]
     return modules
 

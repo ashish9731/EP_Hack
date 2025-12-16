@@ -117,7 +117,7 @@ const Landing = () => {
                     color: '#FFFFFF'
                   }}
                 >
-                  Go to Dashboard <ArrowRight className="ml-2 h-5 w-5" />
+                  Get Started Now <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
                 <Button 
                   size="lg" 

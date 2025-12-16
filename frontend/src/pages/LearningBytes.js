@@ -1,9 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
-import { ArrowLeft, Lightbulb, Video, Timer, Calendar, Play } from 'lucide-react';
-import axios from 'axios';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Badge } from '../components/ui/badge';
 import { toast } from 'sonner';
+import { 
+  Lightbulb, BookOpen, Youtube, RotateCw, 
+  Clock, User, Eye, Mic, TrendingUp, Star,
+  Zap, Calendar
+} from 'lucide-react';
+import axios from 'axios';
 
 const LearningBytes = () => {
   const navigate = useNavigate();
@@ -17,52 +23,26 @@ const LearningBytes = () => {
   
   const fetchContent = async () => {
     try {
-      // Use mock data instead of actual API calls
-      const mockTip = {
-        tip: "Maintain steady eye contact with your audience. Research shows that leaders who make consistent eye contact are perceived as 37% more trustworthy and 28% more competent.",
-        category: "Presence",
-        tip_number: 5,
-        total_tips: 14,
-        rotation_info: {
-          next_rotation: new Date(Date.now() + 86400000).toISOString()
-        }
-      };
+      const token = localStorage.getItem('session_token');
       
-      const mockTalks = [
-        {
-          id: "talk_1",
-          title: "Your Body Language May Shape Who You Are",
-          speaker: "Amy Cuddy",
-          duration: "21:04",
-          description: "Body language affects how others see us, but it may also change how we see ourselves. Social psychologist Amy Cuddy argues that 'power posing' -- standing in a posture of confidence, even when we don't feel confident -- can boost feelings of confidence.",
-          relevance: "Presence, Gravitas",
-          embed_url: "https://www.youtube.com/embed/Ks-_Mh1QhMc"
-        },
-        {
-          id: "talk_2",
-          title: "How Great Leaders Inspire Action",
-          speaker: "Simon Sinek",
-          duration: "18:04",
-          description: "How do you explain when others are able to do the things that seem impossible? Why are people who do the extraordinary things deemed 'leaders'? Simon Sinek offers a simple but powerful model for inspirational leadership -- starting with a golden circle and the question 'Why?'",
-          relevance: "Communication, Storytelling",
-          embed_url: "https://www.youtube.com/embed/qp0HIF3SfI4"
-        },
-        {
-          id: "talk_3",
-          title: "The Power of Vulnerability",
-          speaker: "Brené Brown",
-          duration: "20:06",
-          description: "Brené Brown studies human connection -- our ability to empathize, belong, love. In a poignant, funny talk at TEDxHouston, she shares a deep insight from her research, one that sent her on a personal quest to know herself as well as to understand humanity.",
-          relevance: "Presence, Communication",
-          embed_url: "https://www.youtube.com/embed/iCvmsMzlF7o"
-        }
-      ];
+      // Fetch daily tip
+      const tipResponse = await axios.get('/api/learning/daily-tip', {
+        headers: { 'Authorization': `Bearer ${token}` },
+        withCredentials: true
+      });
       
-      setDailyTip({ tip: mockTip.tip, category: mockTip.category });
-      setRotationInfo(mockTip.rotation_info);
-      setTipNumber(mockTip.tip_number || 1);
-      setTotalTips(mockTip.total_tips || 14);
-      setTedTalks(mockTalks);
+      setDailyTip(tipResponse.data);
+      setRotationInfo(tipResponse.data.rotation_info);
+      setTipNumber(tipResponse.data.tip_number || 1);
+      setTotalTips(tipResponse.data.total_tips || 14);
+      
+      // Fetch TED talks
+      const talksResponse = await axios.get('/api/learning/ted-talks', {
+        headers: { 'Authorization': `Bearer ${token}` },
+        withCredentials: true
+      });
+      
+      setTedTalks(talksResponse.data || []);
     } catch (error) {
       console.error('Error fetching learning content:', error);
       toast.error('Failed to load content');
@@ -103,168 +83,137 @@ const LearningBytes = () => {
       <nav style={{
         backgroundColor: '#FFFFFF',
         borderBottom: '1px solid #E2E8F0',
-        padding: '16px 24px',
         position: 'sticky', top: 0, zIndex: 50
       }}>
-        <Button variant="ghost" onClick={() => navigate('/dashboard')}>
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Dashboard
-        </Button>
-      </nav>
-      
-      <div className="container mx-auto px-6 py-12 max-w-5xl">
-        <div style={{marginBottom: '40px'}}>
-          <h1 style={{fontSize: '42px', fontWeight: 700, color: '#0F172A', marginBottom: '12px'}}>
-            Learning <span style={{color: '#D4AF37'}}>Bytes</span>
-          </h1>
-          <p style={{fontSize: '18px', color: '#64748B'}}>
-            Daily insights and expert resources to enhance your executive presence
-          </p>
-        </div>
-        
-        {dailyTip && (
-          <div className="card-3d" style={{
-            backgroundColor: 'rgba(212, 175, 55, 0.05)',
-            border: '2px solid #D4AF37',
-            borderRadius: '16px', padding: '32px', marginBottom: '40px'
+        <div className="container mx-auto px-6">
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '16px 0', borderBottom: '1px solid #F1F5F9'
           }}>
-            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '16px'}}>
-              <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
-                <div style={{
-                  width: '48px', height: '48px', borderRadius: '12px',
-                  backgroundColor: 'rgba(212, 175, 55, 0.15)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center'
-                }}>
-                  <Lightbulb style={{width: '24px', height: '24px', color: '#D4AF37'}} />
-                </div>
-                <div>
-                  <h2 style={{fontSize: '20px', fontWeight: 600, color: '#0F172A'}}>
-                    Today's Tip — {dailyTip.category}
-                  </h2>
-                  <p style={{fontSize: '13px', color: '#64748B', marginTop: '4px'}}>
-                    Fresh insight every day at midnight UTC
-                  </p>
-                </div>
-              </div>
-              <div style={{
-                padding: '6px 14px',
-                backgroundColor: '#D4AF37', color: '#FFFFFF',
-                borderRadius: '20px', fontSize: '12px', fontWeight: 600
-              }}>
-                #{tipNumber}
-              </div>
+            <h1 style={{fontSize: '24px', fontWeight: 700, color: '#0F172A'}}>
+              <Lightbulb style={{display: 'inline', width: '28px', height: '28px', color: '#D4AF37', marginRight: '8px'}} />
+              Learning <span style={{color: '#D4AF37'}}>Bytes</span>
+            </h1>
+            
+            <div style={{display: 'flex', alignItems: 'center', gap: '16px'}}>
+              <Badge variant="outline" style={{borderColor: '#D4AF37', color: '#D4AF37', fontWeight: 600}}>
+                <RotateCw style={{width: '14px', height: '14px', marginRight: '6px'}} />
+                Rotates in {rotationInfo?.remaining_formatted || '14h 32m'}
+              </Badge>
+              
+              <Button 
+                variant="outline" 
+                onClick={fetchContent}
+                style={{borderColor: '#E2E8F0', color: '#64748B'}}
+              >
+                <RotateCw style={{width: '16px', height: '16px', marginRight: '6px'}} />
+                Refresh
+              </Button>
             </div>
-            <p style={{fontSize: '17px', color: '#1E293B', lineHeight: 1.7, fontWeight: 400}}>
-              {dailyTip.tip}
+          </div>
+          
+          <div style={{padding: '24px 0'}}>
+            <div style={{display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px'}}>
+              <Star style={{width: '20px', height: '20px', color: '#D4AF37'}} />
+              <h2 style={{fontSize: '18px', fontWeight: 600, color: '#0F172A'}}>Daily Executive Insight #{tipNumber} of {totalTips}</h2>
+            </div>
+            <p style={{color: '#64748B', fontSize: '15px', lineHeight: 1.6}}>
+              Bite-sized insights to enhance your executive presence. New tips rotate daily.
             </p>
           </div>
-        )}
-        
-        <div style={{marginBottom: '24px'}}>
-          <h2 style={{fontSize: '28px', fontWeight: 700, color: '#0F172A', marginBottom: '8px'}}>
-            Recommended <span style={{color: '#D4AF37'}}>TED Talks</span>
-          </h2>
-          <p style={{fontSize: '15px', color: '#64748B'}}>
-            Expert insights on leadership, communication, and presence
-          </p>
         </div>
-        
-        <div style={{display: 'flex', flexDirection: 'column', gap: '16px'}}>
-          {tedTalks.map((talk) => (
-            <div
-              key={talk.id}
-              className="card-3d"
-              style={{
-                backgroundColor: '#FFFFFF',
-                border: expandedVideo === talk.id ? '2px solid #D4AF37' : '2px solid #E2E8F0',
-                borderRadius: '16px', padding: '24px',
-                transition: 'all 0.3s ease'
-              }}
-            >
-              <div style={{display: 'flex', flexDirection: 'column', gap: '16px'}}>
-                <div>
-                  <div style={{display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px'}}>
-                    <Video style={{width: '18px', height: '18px', color: '#D4AF37'}} />
-                    <span style={{fontSize: '13px', color: '#64748B', fontWeight: 500}}>{talk.duration}</span>
-                  </div>
-                  
-                  <h3 style={{fontSize: '18px', fontWeight: 600, color: '#0F172A', marginBottom: '4px'}}>{talk.title}</h3>
-                  <p style={{fontSize: '14px', color: '#D4AF37', marginBottom: '8px', fontWeight: 500}}>by {talk.speaker}</p>
-                  <p style={{fontSize: '15px', color: '#1E293B', marginBottom: '12px', lineHeight: 1.6}}>{talk.description}</p>
-                  
-                  <div style={{display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '16px'}}>
-                    {talk.relevance.split(', ').map((tag, idx) => (
-                      <span key={idx} style={{
-                        backgroundColor: 'rgba(212, 175, 55, 0.1)',
-                        border: '1px solid rgba(212, 175, 55, 0.3)',
-                        borderRadius: '12px', padding: '4px 10px',
-                        fontSize: '12px', color: '#92400E'
-                      }}>{tag}</span>
-                    ))}
-                  </div>
-                </div>
+      </nav>
+      
+      <div className="container mx-auto px-6 py-8">
+        <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px'}}>
+          {/* Daily Tip Card */}
+          <Card style={{
+            backgroundColor: '#FFFFFF',
+            borderRadius: '16px',
+            border: '1px solid #E2E8F0',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
+            overflow: 'hidden'
+          }}>
+            <CardHeader style={{backgroundColor: '#FFF7E6', borderBottom: '1px solid #FEF3C7'}}>
+              <CardTitle style={{display: 'flex', alignItems: 'center', gap: '10px', color: '#92400E'}}>
+                <Lightbulb style={{width: '24px', height: '24px'}} />
+                Today's Insight
+              </CardTitle>
+            </CardHeader>
+            <CardContent style={{padding: '24px'}}>
+              <p style={{fontSize: '16px', lineHeight: 1.7, color: '#334155', marginBottom: '20px'}}>
+                {dailyTip?.tip}
+              </p>
+              
+              <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '24px', paddingTop: '20px', borderTop: '1px dashed #E2E8F0'}}>
+                <Badge style={{backgroundColor: '#FEF3C7', color: '#92400E'}}>
+                  {dailyTip?.category || 'Leadership'}
+                </Badge>
                 
-                {expandedVideo === talk.id ? (
-                  <>
-                    <div style={{
-                      position: 'relative',
-                      paddingBottom: '56.25%',
-                      height: 0,
-                      overflow: 'hidden',
-                      borderRadius: '12px',
-                      backgroundColor: '#000'
-                    }}>
-                      <iframe
-                        src={talk.embed_url}
-                        style={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          width: '100%',
-                          height: '100%',
-                          border: 'none'
-                        }}
-                        allowFullScreen
-                        title={talk.title}
-                      />
-                    </div>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => setExpandedVideo(null)}
-                      style={{border: '2px solid #D4AF37', color: '#D4AF37'}}
-                    >
-                      Hide Video
-                    </Button>
-                  </>
-                ) : (
-                  <Button 
-                    size="sm" 
-                    onClick={() => setExpandedVideo(talk.id)}
-                    style={{backgroundColor: '#D4AF37', color: '#FFFFFF'}}
-                  >
-                    <Play className="mr-2 h-4 w-4" /> Watch Video
-                  </Button>
-                )}
+                <div style={{display: 'flex', alignItems: 'center', gap: '8px', color: '#94A3B8', fontSize: '14px'}}>
+                  <Calendar style={{width: '16px', height: '16px'}} />
+                  <span>Daily Rotation</span>
+                </div>
               </div>
+            </CardContent>
+          </Card>
+          
+          {/* TED Talks Section */}
+          <div>
+            <div style={{display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px'}}>
+              <Youtube style={{width: '24px', height: '24px', color: '#D4AF37'}} />
+              <h2 style={{fontSize: '20px', fontWeight: 700, color: '#0F172A'}}>Featured Talks</h2>
             </div>
-          ))}
-        </div>
-        
-        <div className="card-3d" style={{
-          marginTop: '48px',
-          backgroundColor: 'rgba(212, 175, 55, 0.05)',
-          border: '2px solid #D4AF37',
-          borderRadius: '16px', padding: '32px', textAlign: 'center'
-        }}>
-          <h3 style={{fontSize: '22px', fontWeight: 700, color: '#0F172A', marginBottom: '8px'}}>
-            Want Personalized Learning?
-          </h3>
-          <p style={{fontSize: '15px', color: '#64748B', marginBottom: '20px', maxWidth: '500px', margin: '0 auto 20px'}}>
-            Complete video assessments to get AI-powered recommendations tailored to your specific areas for improvement.
-          </p>
-          <Button onClick={() => navigate('/dashboard')} style={{backgroundColor: '#D4AF37', color: '#FFFFFF'}}>
-            Start Assessment
-          </Button>
+            
+            <div style={{display: 'flex', flexDirection: 'column', gap: '16px'}}>
+              {tedTalks.map((talk) => (
+                <Card 
+                  key={talk.id} 
+                  style={{
+                    backgroundColor: '#FFFFFF',
+                    borderRadius: '12px',
+                    border: '1px solid #E2E8F0',
+                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)',
+                    overflow: 'hidden',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+                  onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                  onClick={() => window.open(talk.link, '_blank')}
+                >
+                  <CardContent style={{padding: '20px'}}>
+                    <h3 style={{fontSize: '16px', fontWeight: 600, color: '#0F172A', marginBottom: '12px'}}>
+                      {talk.title}
+                    </h3>
+                    
+                    <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px'}}>
+                      <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+                        <User style={{width: '16px', height: '16px', color: '#94A3B8'}} />
+                        <span style={{fontSize: '14px', color: '#64748B'}}>{talk.speaker}</span>
+                      </div>
+                      
+                      <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+                        <Clock style={{width: '16px', height: '16px', color: '#94A3B8'}} />
+                        <span style={{fontSize: '14px', color: '#64748B'}}>{talk.duration}</span>
+                      </div>
+                    </div>
+                    
+                    <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
+                      <Badge variant="secondary" style={{fontSize: '12px'}}>
+                        TED Talk
+                      </Badge>
+                      
+                      <div style={{display: 'flex', alignItems: 'center', gap: '4px', color: '#94A3B8', fontSize: '13px'}}>
+                        <Eye style={{width: '14px', height: '14px'}} />
+                        <span>{talk.views} views</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
       

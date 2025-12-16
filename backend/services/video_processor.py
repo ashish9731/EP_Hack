@@ -8,7 +8,7 @@ from services.transcription import TranscriptionService
 from services.audio_analysis import AudioAnalysisService
 from services.vision_analysis import VisionAnalysisService
 from services.nlp_analysis import NLPAnalysisService
-from utils.gridfs_helper import get_video_from_storage
+from utils.supabase_storage import get_video_from_storage
 import uuid
 from datetime import datetime, timezone
 
@@ -20,11 +20,29 @@ class VideoProcessorService:
         self.nlp_service = NLPAnalysisService()
     
     async def update_job_status(self, job_id: str, status: str, progress: float, step: str, extra_fields: dict | None = None):
-        # In a real application, you would update a database
-        # For now, we'll just log the update
-        print(f"Updating job {job_id} status: {status}, progress: {progress}%, step: {step}")
-        if extra_fields:
-            print(f"Extra fields: {extra_fields}")
+        try:
+            # Import Supabase client
+            from utils.supabase_client import get_supabase_client
+            supabase = get_supabase_client()
+            
+            # Update job status in database
+            update_data = {
+                "status": status,
+                "progress": progress,
+                "current_step": step,
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }
+            
+            if extra_fields:
+                update_data.update(extra_fields)
+            
+            response = supabase.table("jobs").update(update_data).eq("id", job_id).execute()
+            
+            if not response.data:
+                print(f"Warning: Job {job_id} not found in database")
+            
+        except Exception as e:
+            print(f"Failed to update job status: {str(e)}")
     
     async def process_video(self, job_id: str, video_id: str, user_id: str):
         try:
@@ -144,6 +162,11 @@ class VideoProcessorService:
                 "created_at": datetime.now(timezone.utc).isoformat()
             }
             
+            # Save report to database
+            from utils.supabase_client import get_supabase_client
+            supabase = get_supabase_client()
+            supabase.table("reports").insert(report_doc).execute()
+            
             await self.update_job_status(job_id, "completed", 100, "Report generated", extra_fields={"report_id": report_id})
             
             # Clean up temporary files
@@ -160,11 +183,51 @@ class VideoProcessorService:
             raise e
     
     def _calculate_scores(self, comm_metrics, presence_metrics, gravitas_analysis, storytelling_analysis):
-        comm_score = 80  # Mock score
-        presence_score = 75  # Mock score
+        # Extract gravitas score from NLP analysis
         gravitas_score = gravitas_analysis.get("overall_gravitas", 60)
-        storytelling_score = 85  # Mock score
         
+        # Calculate communication score based on multiple audio metrics
+        # Speaking rate (WPM) - ideal range 120-160
+        wpm = comm_metrics.get("speaking_rate", {}).get("wpm", 0)
+        if wpm > 0:
+            # Score based on proximity to ideal range (120-160 WPM)
+            if 120 <= wpm <= 160:
+                speaking_rate_score = 100
+            elif 100 <= wpm < 120:
+                speaking_rate_score = max(0, 100 - ((120 - wpm) * 3))
+            elif 160 < wpm <= 180:
+                speaking_rate_score = max(0, 100 - ((wpm - 160) * 3))
+            else:
+                speaking_rate_score = max(0, 100 - abs(wpm - 140) * 2)
+        else:
+            speaking_rate_score = 60
+            
+        # Filler words rate - ideal < 2 per minute
+        filler_rate = comm_metrics.get("filler_words", {}).get("rate_per_minute", 0)
+        if filler_rate >= 0:
+            # Score inversely proportional to filler rate (0 fillers = 100, 5+ = 0)
+            filler_score = max(0, 100 - (filler_rate * 20))
+        else:
+            filler_score = 60
+            
+        # Combine audio metrics for communication score
+        comm_score = (speaking_rate_score * 0.7) + (filler_score * 0.3)
+        
+        # Extract presence scores from vision analysis
+        presence_score = presence_metrics.get("posture_score", 75)
+        
+        # Extract storytelling score from analysis
+        if storytelling_analysis.get("has_story", False):
+            # If a story was detected, calculate based on story quality metrics
+            narrative_score = storytelling_analysis.get("narrative_structure", 80)
+            authenticity_score = storytelling_analysis.get("authenticity", 80)
+            concreteness_score = storytelling_analysis.get("concreteness", 80)
+            storytelling_score = (narrative_score + authenticity_score + concreteness_score) / 3
+        else:
+            # If no story detected, use a lower default score
+            storytelling_score = 50
+        
+        # Apply weights according to EP Score formula
         weights = {
             "gravitas": 0.25,
             "communication": 0.35,
@@ -181,8 +244,8 @@ class VideoProcessorService:
         
         return {
             "overall": round(overall, 1),
-            "gravitas": gravitas_score,
-            "communication": comm_score,
-            "presence": presence_score,
-            "storytelling": storytelling_score
+            "gravitas": round(gravitas_score, 1),
+            "communication": round(comm_score, 1),
+            "presence": round(presence_score, 1),
+            "storytelling": round(storytelling_score, 1)
         }

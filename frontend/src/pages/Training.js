@@ -1,68 +1,42 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
-import { ArrowLeft, BookOpen, Clock, Target, Play, Timer, Calendar } from 'lucide-react';
-import axios from 'axios';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Badge } from '../components/ui/badge';
 import { toast } from 'sonner';
+import { 
+  BookOpen, GraduationCap, RotateCw, 
+  Clock, TrendingUp, Star, Zap, Calendar,
+  Play, FileText, Target
+} from 'lucide-react';
+import axios from 'axios';
 
 const Training = () => {
   const navigate = useNavigate();
   const [modules, setModules] = useState([]);
-  const [selectedModule, setSelectedModule] = useState(null);
-  const [moduleContent, setModuleContent] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [loadingContent, setLoadingContent] = useState(false);
   const [rotationInfo, setRotationInfo] = useState(null);
   const [weekTheme, setWeekTheme] = useState('');
   const [weekNumber, setWeekNumber] = useState(1);
-  
-  useEffect(() => {
-    fetchModules();
-    
-    // Update countdown every minute
-    const interval = setInterval(() => {
-      fetchModules();
-    }, 60000);
-    
-    return () => clearInterval(interval);
-  }, []);
+  const [loading, setLoading] = useState(true);
+  const [selectedModule, setSelectedModule] = useState(null);
+  const [loadingContent, setLoadingContent] = useState(false);
+  const [moduleContent, setModuleContent] = useState('');
   
   const fetchModules = async () => {
     try {
-      // Use mock data instead of actual API calls
-      const mockModules = [
-        {
-          id: "module_1",
-          title: "Mastering Vocal Authority",
-          description: "Learn techniques to project confidence through your voice, including pace, tone, and strategic pauses.",
-          focus_area: "Communication",
-          duration: "12 min read",
-          difficulty: "Beginner"
-        },
-        {
-          id: "module_2",
-          title: "Commanding Physical Presence",
-          description: "Develop your body language toolkit with posture, gestures, and spatial awareness techniques.",
-          focus_area: "Presence",
-          duration: "15 min read",
-          difficulty: "Intermediate"
-        },
-        {
-          id: "module_3",
-          title: "Strategic Storytelling Framework",
-          description: "Craft compelling narratives that drive action and create emotional connections with stakeholders.",
-          focus_area: "Storytelling",
-          duration: "18 min read",
-          difficulty: "Advanced"
-        }
-      ];
+      const token = localStorage.getItem('session_token');
       
-      setModules(mockModules);
-      setRotationInfo({
-        next_rotation: new Date(Date.now() + 604800000).toISOString()
+      // Fetch training modules
+      const modulesResponse = await axios.get('/api/training/modules', {
+        headers: { 'Authorization': `Bearer ${token}` },
+        withCredentials: true
       });
-      setWeekTheme("Executive Communication Fundamentals");
-      setWeekNumber(3);
+      
+      const data = modulesResponse.data;
+      setModules(data.modules || []);
+      setRotationInfo(data.rotation_info);
+      setWeekTheme(data.week_theme || "Executive Communication Fundamentals");
+      setWeekNumber(data.week_number || 1);
     } catch (error) {
       console.error('Error fetching modules:', error);
       toast.error('Failed to load training modules');
@@ -76,7 +50,12 @@ const Training = () => {
     setLoadingContent(true);
     
     try {
-      // Use mock data instead of actual API calls
+      const token = localStorage.getItem('session_token');
+      
+      // Fetch module content (in a real app, this would fetch actual content)
+      // For now, we'll simulate loading content
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
       const mockContent = {
         content: `# ${module.title}
 
@@ -84,34 +63,37 @@ const Training = () => {
 
 In this module, you'll learn:
 
-1. **Core Techniques**: Evidence-based strategies to enhance your ${module.focus_area.toLowerCase()}
-2. **Real-world Applications**: Case studies from Fortune 500 executives
-3. **Practice Exercises**: Actionable drills you can implement immediately
+- Core communication techniques for executive presence
+- Strategies to command attention and build credibility
+- Methods to articulate vision and inspire teams
 
-## Module Content
+## Module Overview
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+${module.description}
 
-Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+## Learning Objectives
+
+By the end of this module, you will be able to:
+
+1. Demonstrate confident body language and vocal presence
+2. Structure communications for maximum impact
+3. Adapt your communication style to different audiences
+4. Deliver compelling presentations that drive action
+
+## Practice Exercises
+
+1. **Voice Projection Exercise** - Practice projecting your voice clearly across different room sizes
+2. **Pause Power** - Learn to use strategic pauses for emphasis and clarity
+3. **Storytelling Framework** - Apply a structured approach to executive storytelling
 
 ## Key Takeaways
 
-- Point 1: Essential insight for developing executive presence
-- Point 2: Practical technique you can apply today
-- Point 3: Advanced strategy for seasoned leaders
-
-## Practice Exercise
-
-Take 5 minutes to:
-
-1. Reflect on a recent challenging communication scenario
-2. Identify one area for improvement
-3. Commit to implementing one specific technique this week
-
-Remember: Executive presence is developed through consistent, deliberate practice.`
+- Executive presence is built through consistent practice of fundamental skills
+- Confidence comes from preparation and authentic communication
+- Great leaders adapt their communication style to their audience while staying true to their authentic voice`
       };
       
-      setModuleContent(mockContent);
+      setModuleContent(mockContent.content);
     } catch (error) {
       console.error('Error loading module:', error);
       toast.error('Failed to load module content');
@@ -120,15 +102,16 @@ Remember: Executive presence is developed through consistent, deliberate practic
     }
   };
   
-  const getFocusAreaColor = (focusArea) => {
-    switch(focusArea) {
-      case 'Communication': return { bg: 'rgba(212, 175, 55, 0.15)', text: '#92400E', border: 'rgba(212, 175, 55, 0.4)' };
-      case 'Presence': return { bg: 'rgba(34, 197, 94, 0.15)', text: '#166534', border: 'rgba(34, 197, 94, 0.4)' };
-      case 'Gravitas': return { bg: 'rgba(139, 92, 246, 0.15)', text: '#5B21B6', border: 'rgba(139, 92, 246, 0.4)' };
-      case 'Storytelling': return { bg: 'rgba(245, 158, 11, 0.15)', text: '#92400E', border: 'rgba(245, 158, 11, 0.4)' };
-      default: return { bg: '#F1F5F9', text: '#64748B', border: '#E2E8F0' };
-    }
-  };
+  useEffect(() => {
+    fetchModules();
+    
+    // Update every minute
+    const interval = setInterval(() => {
+      fetchModules();
+    }, 60000);
+    
+    return () => clearInterval(interval);
+  }, []);
   
   if (loading) {
     return (
@@ -140,101 +123,7 @@ Remember: Executive presence is developed through consistent, deliberate practic
             borderRadius: '50%', animation: 'spin 1s linear infinite',
             margin: '0 auto 16px'
           }}></div>
-          <p style={{color: '#64748B'}}>Loading modules...</p>
-        </div>
-      </div>
-    );
-  }
-  
-  if (selectedModule) {
-    return (
-      <div style={{minHeight: '100vh', backgroundColor: '#FAFAFA'}}>
-        <nav style={{
-          backgroundColor: '#FFFFFF',
-          borderBottom: '1px solid #E2E8F0',
-          padding: '16px 24px',
-          position: 'sticky', top: 0, zIndex: 50
-        }}>
-          <Button variant="ghost" onClick={() => { setSelectedModule(null); setModuleContent(null); }}>
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Modules
-          </Button>
-        </nav>
-        
-        <div className="container mx-auto px-6 py-12 max-w-4xl">
-          <div style={{marginBottom: '32px'}}>
-            <div style={{
-              display: 'inline-block', padding: '6px 16px',
-              backgroundColor: getFocusAreaColor(selectedModule.focus_area).bg,
-              color: getFocusAreaColor(selectedModule.focus_area).text,
-              borderRadius: '20px', fontSize: '13px', fontWeight: 600, marginBottom: '16px',
-              border: `1px solid ${getFocusAreaColor(selectedModule.focus_area).border}`
-            }}>{selectedModule.focus_area}</div>
-            
-            <h1 style={{fontSize: '36px', fontWeight: 700, color: '#0F172A', marginBottom: '12px'}}>
-              {selectedModule.title}
-            </h1>
-            <p style={{fontSize: '18px', color: '#64748B', marginBottom: '24px'}}>{selectedModule.description}</p>
-            
-            <div style={{display: 'flex', gap: '16px', alignItems: 'center'}}>
-              <div style={{display: 'flex', alignItems: 'center', gap: '6px'}}>
-                <Clock style={{width: '18px', height: '18px', color: '#D4AF37'}} />
-                <span style={{fontSize: '14px', color: '#64748B'}}>{selectedModule.duration}</span>
-              </div>
-              <div style={{
-                padding: '4px 12px',
-                backgroundColor: 'rgba(212, 175, 55, 0.1)',
-                border: '1px solid rgba(212, 175, 55, 0.3)',
-                borderRadius: '12px', fontSize: '13px', color: '#92400E', fontWeight: 500
-              }}>{selectedModule.difficulty}</div>
-            </div>
-          </div>
-          
-          {loadingContent ? (
-            <div style={{textAlign: 'center', padding: '60px 0'}}>
-              <div style={{
-                width: '48px', height: '48px',
-                border: '4px solid #E2E8F0', borderTopColor: '#D4AF37',
-                borderRadius: '50%', animation: 'spin 1s linear infinite',
-                margin: '0 auto 16px'
-              }}></div>
-              <p style={{color: '#64748B'}}>Generating personalized content...</p>
-            </div>
-          ) : moduleContent && (
-            <div>
-              <div className="card-3d" style={{
-                backgroundColor: '#FFFFFF',
-                border: '2px solid #E2E8F0',
-                borderRadius: '16px', padding: '32px', marginBottom: '32px'
-              }}>
-                <div style={{fontSize: '15px', lineHeight: 1.8, color: '#1E293B', whiteSpace: 'pre-line'}}>
-                  {moduleContent.content}
-                </div>
-              </div>
-              
-              <div className="card-3d" style={{
-                backgroundColor: 'rgba(212, 175, 55, 0.05)',
-                border: '2px solid #D4AF37',
-                borderRadius: '16px', padding: '24px', marginBottom: '32px'
-              }}>
-                <h3 style={{fontSize: '18px', fontWeight: 700, color: '#0F172A', marginBottom: '12px'}}>
-                  Ready to Practice?
-                </h3>
-                <p style={{fontSize: '15px', color: '#64748B', marginBottom: '16px'}}>
-                  Apply what you've learned by recording a practice video. Get instant AI feedback on your technique.
-                </p>
-                <Button onClick={() => navigate('/dashboard')} style={{backgroundColor: '#D4AF37', color: '#FFFFFF'}}>
-                  <Play className="mr-2 h-4 w-4" /> Start Practice Recording
-                </Button>
-              </div>
-              
-              <div style={{textAlign: 'center'}}>
-                <Button variant="outline" onClick={() => { setSelectedModule(null); setModuleContent(null); }}
-                  style={{border: '2px solid #D4AF37', color: '#D4AF37'}}>
-                  Complete Module
-                </Button>
-              </div>
-            </div>
-          )}
+          <p style={{color: '#64748B'}}>Loading training modules...</p>
         </div>
       </div>
     );
@@ -245,120 +134,169 @@ Remember: Executive presence is developed through consistent, deliberate practic
       <nav style={{
         backgroundColor: '#FFFFFF',
         borderBottom: '1px solid #E2E8F0',
-        padding: '16px 24px',
         position: 'sticky', top: 0, zIndex: 50
       }}>
-        <Button variant="ghost" onClick={() => navigate('/dashboard')}>
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Dashboard
-        </Button>
-      </nav>
-      
-      <div className="container mx-auto px-6 py-12 max-w-5xl">
-        <div style={{marginBottom: '40px'}}>
-          <h1 style={{fontSize: '42px', fontWeight: 700, color: '#0F172A', marginBottom: '12px'}}>
-            Training <span style={{color: '#D4AF37'}}>Modules</span>
-          </h1>
-          <p style={{fontSize: '18px', color: '#64748B'}}>
-            Structured micro-courses with AI-generated content tailored to your profile
-          </p>
-        </div>
-        
-        {/* Current Week Theme Banner */}
-        {weekTheme && (
-          <div className="card-3d" style={{
-            backgroundColor: 'rgba(212, 175, 55, 0.05)',
-            border: '2px solid #D4AF37',
-            borderRadius: '16px', padding: '24px', marginBottom: '32px',
-            display: 'flex', alignItems: 'center', gap: '20px'
+        <div className="container mx-auto px-6">
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '16px 0', borderBottom: '1px solid #F1F5F9'
           }}>
-            <div style={{
-              width: '60px', height: '60px', borderRadius: '16px',
-              backgroundColor: '#D4AF37',
-              display: 'flex', alignItems: 'center', justifyContent: 'center'
-            }}>
-              <BookOpen style={{width: '30px', height: '30px', color: '#FFFFFF'}} />
-            </div>
-            <div>
-              <h2 style={{fontSize: '24px', fontWeight: 700, color: '#0F172A', marginBottom: '4px'}}>
-                This Week's Focus: <span style={{color: '#D4AF37'}}>{weekTheme}</span>
-              </h2>
-              <p style={{fontSize: '15px', color: '#64748B'}}>
-                Complete all {modules.length} modules this week to master {weekTheme.toLowerCase()}
-              </p>
+            <h1 style={{fontSize: '24px', fontWeight: 700, color: '#0F172A'}}>
+              <GraduationCap style={{display: 'inline', width: '28px', height: '28px', color: '#D4AF37', marginRight: '8px'}} />
+              Training <span style={{color: '#D4AF37'}}>Modules</span>
+            </h1>
+            
+            <div style={{display: 'flex', alignItems: 'center', gap: '16px'}}>
+              <Badge variant="outline" style={{borderColor: '#D4AF37', color: '#D4AF37', fontWeight: 600}}>
+                <RotateCw style={{width: '14px', height: '14px', marginRight: '6px'}} />
+                Rotates in {rotationInfo?.remaining_formatted || '5d 14h 32m'}
+              </Badge>
+              
+              <Button 
+                variant="outline" 
+                onClick={fetchModules}
+                style={{borderColor: '#E2E8F0', color: '#64748B'}}
+              >
+                <RotateCw style={{width: '16px', height: '16px', marginRight: '6px'}} />
+                Refresh
+              </Button>
             </div>
           </div>
-        )}
-        
-        <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px'}}>
-          {modules.map((module, idx) => {
-            const colors = getFocusAreaColor(module.focus_area);
-            return (
-              <div
-                key={module.id}
-                className="card-3d"
-                style={{
-                  backgroundColor: '#FFFFFF',
-                  border: '2px solid #E2E8F0',
-                  borderRadius: '16px', padding: '24px',
-                  cursor: 'pointer', transition: 'all 0.3s ease',
-                  position: 'relative', overflow: 'hidden'
-                }}
-                onClick={() => loadModule(module)}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = '#D4AF37';
-                  e.currentTarget.style.transform = 'translateY(-4px)';
-                  e.currentTarget.style.boxShadow = '0 12px 24px -8px rgba(212, 175, 55, 0.15)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = '#E2E8F0';
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = 'none';
-                }}
-              >
-                {/* Module Number Badge */}
-                <div style={{
-                  position: 'absolute', top: '16px', right: '16px',
-                  width: '32px', height: '32px', borderRadius: '50%',
-                  backgroundColor: '#D4AF37', color: '#FFFFFF',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '14px', fontWeight: 700
-                }}>
-                  {idx + 1}
-                </div>
-                
-                <div style={{
-                  display: 'inline-block', padding: '4px 12px',
-                  backgroundColor: colors.bg, color: colors.text,
-                  borderRadius: '12px', fontSize: '12px', fontWeight: 600, marginBottom: '12px',
-                  border: `1px solid ${colors.border}`
-                }}>{module.focus_area}</div>
-                
-                <h3 style={{fontSize: '18px', fontWeight: 600, color: '#0F172A', marginBottom: '8px', paddingRight: '40px'}}>
-                  {module.title}
-                </h3>
-                <p style={{fontSize: '14px', color: '#64748B', marginBottom: '16px', lineHeight: 1.6}}>
-                  {module.description}
-                </p>
-                
-                <div style={{
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                  paddingTop: '16px', borderTop: '1px solid #E2E8F0'
-                }}>
-                  <div style={{display: 'flex', alignItems: 'center', gap: '6px'}}>
-                    <Clock style={{width: '16px', height: '16px', color: '#D4AF37'}} />
-                    <span style={{fontSize: '13px', color: '#64748B'}}>{module.duration}</span>
-                  </div>
-                  <span style={{
-                    fontSize: '12px', color: '#92400E',
-                    padding: '4px 10px',
-                    backgroundColor: 'rgba(212, 175, 55, 0.1)',
-                    borderRadius: '8px', fontWeight: 500
-                  }}>{module.difficulty}</span>
-                </div>
-              </div>
-            );
-          })}
+          
+          <div style={{padding: '24px 0'}}>
+            <div style={{display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px'}}>
+              <Star style={{width: '20px', height: '20px', color: '#D4AF37'}} />
+              <h2 style={{fontSize: '18px', fontWeight: 600, color: '#0F172A'}}>Week {weekNumber}: {weekTheme}</h2>
+            </div>
+            <p style={{color: '#64748B', fontSize: '15px', lineHeight: 1.6}}>
+              Structured learning modules to develop your executive presence skills. New modules rotate weekly.
+            </p>
+          </div>
         </div>
+      </nav>
+      
+      <div className="container mx-auto px-6 py-8">
+        {selectedModule ? (
+          <div>
+            <div style={{marginBottom: '24px'}}>
+              <Button 
+                variant="outline" 
+                onClick={() => setSelectedModule(null)}
+                style={{borderColor: '#E2E8F0', color: '#64748B', marginBottom: '16px'}}
+              >
+                ← Back to Modules
+              </Button>
+              
+              <Card style={{
+                backgroundColor: '#FFFFFF',
+                borderRadius: '16px',
+                border: '1px solid #E2E8F0',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)'
+              }}>
+                <CardHeader style={{borderBottom: '1px solid #F1F5F9'}}>
+                  <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
+                    <CardTitle style={{fontSize: '24px', color: '#0F172A'}}>
+                      {selectedModule.title}
+                    </CardTitle>
+                    <Badge style={{backgroundColor: '#D4AF37', color: '#FFFFFF'}}>
+                      {selectedModule.focus_area}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent style={{padding: '24px'}}>
+                  {loadingContent ? (
+                    <div style={{textAlign: 'center', padding: '48px'}}>
+                      <div style={{
+                        width: '48px', height: '48px',
+                        border: '4px solid #E2E8F0', borderTopColor: '#D4AF37',
+                        borderRadius: '50%', animation: 'spin 1s linear infinite',
+                        margin: '0 auto 16px'
+                      }}></div>
+                      <p style={{color: '#64748B'}}>Loading module content...</p>
+                    </div>
+                  ) : (
+                    <div style={{lineHeight: 1.7}}>
+                      {moduleContent.split('\n\n').map((paragraph, index) => {
+                        if (paragraph.startsWith('# ')) {
+                          return <h1 key={index} style={{fontSize: '28px', fontWeight: 700, color: '#0F172A', marginBottom: '24px'}}>{paragraph.substring(2)}</h1>;
+                        } else if (paragraph.startsWith('## ')) {
+                          return <h2 key={index} style={{fontSize: '22px', fontWeight: 600, color: '#0F172A', marginTop: '32px', marginBottom: '16px'}}>{paragraph.substring(3)}</h2>;
+                        } else if (paragraph.startsWith('### ')) {
+                          return <h3 key={index} style={{fontSize: '18px', fontWeight: 600, color: '#0F172A', marginTop: '24px', marginBottom: '12px'}}>{paragraph.substring(4)}</h3>;
+                        } else if (paragraph.startsWith('- ')) {
+                          return (
+                            <ul key={index} style={{marginBottom: '16px', paddingLeft: '20px'}}>
+                              {paragraph.split('\n').map((item, i) => (
+                                <li key={i} style={{marginBottom: '8px'}}>{item.substring(2)}</li>
+                              ))}
+                            </ul>
+                          );
+                        } else {
+                          return <p key={index} style={{marginBottom: '16px', color: '#334155'}}>{paragraph}</p>;
+                        }
+                      })}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        ) : (
+          <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '24px'}}>
+            {modules.map((module) => {
+              const diffColors = {
+                Beginner: { bg: '#DCFCE7', text: '#166534', border: '#86EFAC' },
+                Intermediate: { bg: '#FEF3C7', text: '#92400E', border: '#FDE68A' },
+                Advanced: { bg: '#FEE2E2', text: '#B91C1C', border: '#FCA5A5' }
+              }[module.difficulty] || { bg: '#F3F4F6', text: '#374151', border: '#D1D5DB' };
+              
+              return (
+                <div 
+                  key={module.id} 
+                  style={{
+                    backgroundColor: '#FFFFFF',
+                    borderRadius: '16px',
+                    border: '1px solid #E2E8F0',
+                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
+                    overflow: 'hidden',
+                    transition: 'all 0.2s ease',
+                    cursor: 'pointer',
+                    position: 'relative'
+                  }}
+                  onClick={() => loadModule(module)}
+                  onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-4px)'}
+                  onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                >
+                  <div style={{padding: '24px'}}>
+                    <div style={{display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '16px'}}>
+                      <h3 style={{fontSize: '18px', fontWeight: 700, color: '#0F172A', marginBottom: '8px'}}>{module.title}</h3>
+                      <span style={{
+                        backgroundColor: diffColors.bg, color: diffColors.text,
+                        border: `1px solid ${diffColors.border}`,
+                        padding: '4px 10px', borderRadius: '8px',
+                        fontSize: '12px', fontWeight: 600
+                      }}>{module.difficulty}</span>
+                    </div>
+                    
+                    <p style={{fontSize: '14px', color: '#64748B', marginBottom: '16px', lineHeight: 1.6}}>{module.description}</p>
+                    
+                    <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '16px', borderTop: '1px solid #E2E8F0'}}>
+                      <div style={{display: 'flex', alignItems: 'center', gap: '4px', color: '#94A3B8'}}>
+                        <Clock style={{width: '16px', height: '16px'}} />
+                        <span style={{fontSize: '13px'}}>{module.duration}</span>
+                      </div>
+                      
+                      <div style={{display: 'flex', alignItems: 'center', gap: '4px', color: '#94A3B8'}}>
+                        <Target style={{width: '16px', height: '16px'}} />
+                        <span style={{fontSize: '13px'}}>{module.focus_area}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
       
       <style>{`

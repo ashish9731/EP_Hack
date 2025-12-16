@@ -13,18 +13,23 @@ const AuthCallback = () => {
     hasProcessed.current = true;
     
     const processSession = async () => {
-      // Always redirect to dashboard without authentication
-      const mockUser = {
-        user_id: "mock_user_123",
-        email: "demo@example.com",
-        name: "Demo User",
-        created_at: new Date().toISOString()
-      };
-      
-      navigate('/dashboard', { 
-        replace: true,
-        state: { user: mockUser }
-      });
+      try {
+        // Get the user data from the backend
+        const response = await authAPI.getMe();
+        
+        if (response.data) {
+          navigate('/dashboard', { 
+            replace: true,
+            state: { user: response.data }
+          });
+        } else {
+          throw new Error('Failed to get user data');
+        }
+      } catch (error) {
+        console.error('Auth callback error:', error);
+        toast.error('Authentication failed');
+        navigate('/login');
+      }
     };
     
     processSession();
