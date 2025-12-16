@@ -15,14 +15,17 @@ const Login = () => {
   
   const handleLogin = async (e) => {
     e.preventDefault();
+    console.log('Email login clicked with:', { email, password }); // Debug log
     setLoading(true);
     try {
       const response = await authAPI.login({ email, password });
+      console.log('Login response:', response); // Debug log
       toast.success('Welcome back!');
       setTimeout(() => {
         navigate('/dashboard', { replace: true });
       }, 100);
     } catch (error) {
+      console.error('Login error:', error); // Debug log
       toast.error(error.response?.data?.detail || 'Login failed');
     } finally {
       setLoading(false);
@@ -30,10 +33,17 @@ const Login = () => {
   };
   
   const handleGoogleLogin = async () => {
+    console.log('Google login clicked'); // Debug log
     try {
       const response = await authAPI.googleRedirect();
-      window.location.href = response.data.auth_url;
+      console.log('Google redirect response:', response); // Debug log
+      if (response.data?.auth_url) {
+        window.location.href = response.data.auth_url;
+      } else {
+        toast.error('Failed to initiate Google login');
+      }
     } catch (error) {
+      console.error('Google login error:', error); // Debug log
       toast.error('Failed to initiate Google login');
     }
   };

@@ -2,7 +2,9 @@ import axios from 'axios';
 import { getDeviceFingerprint } from './deviceFingerprint';
 
 // Dynamically determine backend URL based on current domain
-const API_URL = process.env.REACT_APP_BACKEND_URL || (typeof window !== 'undefined' ? window.location.origin : '');
+const API_URL = process.env.REACT_APP_BACKEND_URL || (typeof window !== 'undefined' ? window.location.origin.replace(':3000', ':5001') : '');
+
+console.log('API URL:', API_URL); // Debug log
 
 export const api = axios.create({
   baseURL: `${API_URL}/api`,
@@ -14,11 +16,13 @@ export const api = axios.create({
 
 // Store session token from login/signup responses
 api.interceptors.response.use((response) => {
+  console.log('API Response:', response); // Debug log
   if (response.data?.session_token) {
     localStorage.setItem('session_token', response.data.session_token);
   }
   return response;
 }, (error) => {
+  console.error('API Error:', error); // Debug log
   return Promise.reject(error);
 });
 
@@ -33,6 +37,7 @@ api.interceptors.request.use((config) => {
   const fingerprint = getDeviceFingerprint();
   config.headers['X-Device-Fingerprint'] = fingerprint;
   
+  console.log('API Request:', config); // Debug log
   return config;
 });
 
@@ -44,7 +49,10 @@ export const authAPI = {
     return api.post('/auth/logout');
   },
   getMe: () => api.get('/auth/me'),
-  googleRedirect: () => api.get('/auth/google-redirect'),
+  googleRedirect: () => {
+    console.log('Calling googleRedirect API'); // Debug log
+    return api.get('/auth/google-redirect');
+  },
 };
 
 export const videoAPI = {

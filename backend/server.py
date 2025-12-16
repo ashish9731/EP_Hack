@@ -1,6 +1,7 @@
 import os
 import sys
 from pathlib import Path
+from dotenv import load_dotenv
 
 # Add the backend directory to Python path
 backend_path = Path(__file__).parent
@@ -12,11 +13,14 @@ sys.path.insert(0, os.getcwd())
 sys.path.insert(0, os.path.join(os.getcwd(), 'backend'))
 
 # Load environment variables
+ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
+
+# Import Supabase client after loading environment variables
+from utils.supabase_client import get_supabase_client
 
 from fastapi import FastAPI, APIRouter, HTTPException, UploadFile, File, Depends, Response, Cookie, Header
 from fastapi.responses import StreamingResponse, FileResponse
-from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 import logging
 from datetime import datetime, timezone, timedelta
@@ -195,12 +199,15 @@ async def google_auth_redirect():
     # Generate the Google OAuth URL
     try:
         redirect_url = f"{os.getenv('FRONTEND_URL', 'http://localhost:3000')}/auth/callback"
-        auth_url = supabase.auth.sign_in_with_oauth({
+        oauth_response = supabase.auth.sign_in_with_oauth({
             "provider": "google",
             "options": {
                 "redirectTo": redirect_url
             }
-        }).authorization_url
+        })
+        
+        # Extract the authorization URL from the response
+        auth_url = oauth_response.url
         
         logger.info(f"Generated Google auth URL: {auth_url}")
         return {"auth_url": auth_url}
@@ -405,11 +412,13 @@ async def stream_video(
 
 # Add the rest of the routes
 app.include_router(api_router)
-app.include_router(create_profile_router(get_supabase_client))
-app.include_router(get_subscription_routes(get_supabase_client))
-app.include_router(create_coaching_router(get_supabase_client))
-app.include_router(create_sharing_router(get_supabase_client))
-app.include_router(create_retention_router(get_supabase_client))
+
+# Include other routers
+app.include_router(create_profile_router(get_supabase_client()))
+app.include_router(get_subscription_routes(get_supabase_client()))
+app.include_router(create_coaching_router(get_supabase_client()))
+app.include_router(create_sharing_router(get_supabase_client()))
+app.include_router(create_retention_router(get_supabase_client()))
 
 # CORS middleware
 # Get frontend URL from environment variable, fallback to localhost for development
@@ -545,3 +554,7 @@ async def get_simulator_scenarios(
     # Get current scenarios based on rotation period
     scenarios = await get_current_simulator_scenarios()
     return scenarios
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=5000, log_level="info")
