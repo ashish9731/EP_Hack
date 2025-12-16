@@ -10,7 +10,7 @@ import {
   HardDrive, Cpu, Activity
 } from 'lucide-react';
 import Webcam from 'react-webcam';
-import axios from 'axios';
+import { api } from '../lib/api';
 
 const Simulator = () => {
   const navigate = useNavigate();
@@ -43,11 +43,7 @@ const Simulator = () => {
   
   const fetchScenarios = async () => {
     try {
-      const token = localStorage.getItem('session_token');
-      const response = await axios.get('/api/simulator/scenarios', {
-        headers: { 'Authorization': `Bearer ${token}` },
-        withCredentials: true
-      });
+      const response = await api.get('/simulator/scenarios');
       
       const data = response.data;
       setScenarios(data.scenarios || []);
@@ -122,21 +118,16 @@ const Simulator = () => {
       const token = localStorage.getItem('session_token');
       
       // Upload video
-      const uploadResponse = await axios.post('/api/videos/upload', formData, {
+      const uploadResponse = await api.post('/videos/upload', formData, {
         headers: {
-          'Content-Type': 'multipart/form-data',
-          'Authorization': `Bearer ${token}`
-        },
-        withCredentials: true
+          'Content-Type': 'multipart/form-data'
+        }
       });
       
       const videoId = uploadResponse.data.video_id;
       
       // Process video
-      const processResponse = await axios.post(`/api/videos/${videoId}/process`, {}, {
-        headers: { 'Authorization': `Bearer ${token}` },
-        withCredentials: true
-      });
+      const processResponse = await api.post(`/videos/${videoId}/process`, {});
       
       const jobId = processResponse.data.job_id;
       

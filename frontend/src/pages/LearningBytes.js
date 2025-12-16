@@ -9,7 +9,7 @@ import {
   Clock, User, Eye, Mic, TrendingUp, Star,
   Zap, Calendar
 } from 'lucide-react';
-import axios from 'axios';
+import { api } from '../lib/api';
 
 const LearningBytes = () => {
   const navigate = useNavigate();
@@ -23,13 +23,8 @@ const LearningBytes = () => {
   
   const fetchContent = async () => {
     try {
-      const token = localStorage.getItem('session_token');
-      
       // Fetch daily tip
-      const tipResponse = await axios.get('/api/learning/daily-tip', {
-        headers: { 'Authorization': `Bearer ${token}` },
-        withCredentials: true
-      });
+      const tipResponse = await api.get('/learning/daily-tip');
       
       setDailyTip(tipResponse.data);
       setRotationInfo(tipResponse.data.rotation_info);
@@ -37,10 +32,7 @@ const LearningBytes = () => {
       setTotalTips(tipResponse.data.total_tips || 14);
       
       // Fetch TED talks
-      const talksResponse = await axios.get('/api/learning/ted-talks', {
-        headers: { 'Authorization': `Bearer ${token}` },
-        withCredentials: true
-      });
+      const talksResponse = await api.get('/learning/ted-talks');
       
       setTedTalks(talksResponse.data || []);
     } catch (error) {

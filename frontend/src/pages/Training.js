@@ -9,7 +9,7 @@ import {
   Clock, TrendingUp, Star, Zap, Calendar,
   Play, FileText, Target
 } from 'lucide-react';
-import axios from 'axios';
+import { api } from '../lib/api';
 
 const Training = () => {
   const navigate = useNavigate();
@@ -24,13 +24,8 @@ const Training = () => {
   
   const fetchModules = async () => {
     try {
-      const token = localStorage.getItem('session_token');
-      
       // Fetch training modules
-      const modulesResponse = await axios.get('/api/training/modules', {
-        headers: { 'Authorization': `Bearer ${token}` },
-        withCredentials: true
-      });
+      const modulesResponse = await api.get('/training/modules');
       
       const data = modulesResponse.data;
       setModules(data.modules || []);
