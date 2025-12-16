@@ -56,6 +56,7 @@ from services.timed_content import (
 
 from routes.coaching import create_coaching_router
 from routes.sharing import create_sharing_router
+from routes.content import get_content_routes
 from services.video_retention import create_retention_router, VideoRetentionService
 
 # Environment variables already loaded at the top of the file
@@ -471,6 +472,7 @@ app.include_router(get_subscription_routes(get_supabase_client()))
 app.include_router(create_coaching_router(get_supabase_client()))
 app.include_router(create_sharing_router(get_supabase_client()))
 app.include_router(create_retention_router(get_supabase_client()))
+app.include_router(get_content_routes())
 
 # CORS middleware
 # Get frontend URL from environment variable, fallback to localhost for development
@@ -524,7 +526,7 @@ async def get_daily_tip(
     authorization: Optional[str] = Header(None)
 ):
     user = await get_current_user(session_token, authorization)
-    tip = await get_current_daily_tip()
+    tip = get_current_daily_tip()
     return tip
 
 @api_router.get("/learning/ted-talks")
@@ -533,31 +535,49 @@ async def get_ted_talks(
     authorization: Optional[str] = Header(None)
 ):
     await get_current_user(session_token, authorization)
-    # Return list of available TED talks
+    # Return predefined TED talks from content service
+    from routes.content import get_content_routes
+    # Just return the predefined TED talks
     ted_talks = [
         {
             "id": "1",
-            "title": "How to speak so that people want to listen",
-            "speaker": "Julian Treasure",
-            "duration": "9:59",
-            "views": "25M",
-            "link": "https://www.ted.com/talks/julian_treasure_how_to_speak_so_that_people_want_to_listen"
+            "title": "How great leaders inspire action",
+            "speaker": "Simon Sinek",
+            "duration": "18:04",
+            "views": "52M",
+            "link": "https://www.ted.com/talks/simon_sinek_how_great_leaders_inspire_action"
         },
         {
             "id": "2",
             "title": "The power of vulnerability",
             "speaker": "Brené Brown",
-            "duration": "20:02",
-            "views": "15M",
+            "duration": "20:03",
+            "views": "60M",
             "link": "https://www.ted.com/talks/brene_brown_the_power_of_vulnerability"
         },
         {
             "id": "3",
-            "title": "How great leaders inspire action",
-            "speaker": "Simon Sinek",
-            "duration": "18:05",
-            "views": "12M",
-            "link": "https://www.ted.com/talks/simon_sinek_how_great_leaders_inspire_action"
+            "title": "Your body language may shape who you are",
+            "speaker": "Amy Cuddy",
+            "duration": "20:55",
+            "views": "47M",
+            "link": "https://www.ted.com/talks/amy_cuddy_your_body_language_may_shape_who_you_are"
+        },
+        {
+            "id": "4",
+            "title": "How to speak so that people want to listen",
+            "speaker": "Julian Treasure",
+            "duration": "9:59",
+            "views": "15M",
+            "link": "https://www.ted.com/talks/julian_treasure_how_to_speak_so_that_people_want_to_listen"
+        },
+        {
+            "id": "5",
+            "title": "The skill of self-confidence",
+            "speaker": "Dr. Ivan Joseph",
+            "duration": "13:40",
+            "views": "6.2M",
+            "link": "https://www.ted.com/talks/ivan_joseph_the_skill_of_self_confidence"
         }
     ]
     return ted_talks
@@ -569,32 +589,7 @@ async def get_training_modules(
 ):
     await get_current_user(session_token, authorization)
     # Return list of available training modules
-    modules = [
-        {
-            "id": "strategic-pauses", 
-            "title": "Strategic Pauses", 
-            "duration": "3 min",
-            "description": "Learn techniques to project confidence through your voice, including pace, tone, and strategic pauses.",
-            "focus_area": "Communication",
-            "difficulty": "Beginner"
-        },
-        {
-            "id": "lens-eye-contact", 
-            "title": "Lens Eye Contact", 
-            "duration": "4 min",
-            "description": "Develop your body language toolkit with posture, gestures, and spatial awareness techniques.",
-            "focus_area": "Presence",
-            "difficulty": "Intermediate"
-        },
-        {
-            "id": "storytelling-framework", 
-            "title": "Strategic Storytelling Framework", 
-            "duration": "5 min",
-            "description": "Craft compelling narratives that drive action and create emotional connections with stakeholders.",
-            "focus_area": "Storytelling",
-            "difficulty": "Advanced"
-        }
-    ]
+    modules = get_current_training_modules()
     return modules
 
 @api_router.get("/simulator/scenarios")
@@ -604,7 +599,7 @@ async def get_simulator_scenarios(
 ):
     await get_current_user(session_token, authorization)
     # Get current scenarios based on rotation period
-    scenarios = await get_current_simulator_scenarios()
+    scenarios = get_current_simulator_scenarios()
     return scenarios
 
 if __name__ == "__main__":

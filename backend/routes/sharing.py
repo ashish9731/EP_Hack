@@ -14,11 +14,11 @@ def create_sharing_router(supabase):
         session_token: Optional[str] = Cookie(None),
         authorization: Optional[str] = Header(None),
     ):
-        user = get_current_user(session_token, authorization)
+        user = await get_current_user(session_token, authorization)
 
         try:
             # Get Supabase client
-            supabase_client = supabase()
+            supabase_client = supabase
             
             # Check if report exists and belongs to the user
             report_response = supabase_client.table("reports").select("id").eq("id", report_id).eq("user_id", user["user_id"]).execute()
@@ -53,7 +53,7 @@ def create_sharing_router(supabase):
     async def get_shared_report(share_id: str):
         try:
             # Get Supabase client
-            supabase_client = supabase()
+            supabase_client = supabase
             
             # Query share link from Supabase
             share_response = supabase_client.table("shared_reports").select("*").eq("id", share_id).execute()
@@ -97,11 +97,11 @@ def create_sharing_router(supabase):
         session_token: Optional[str] = Cookie(None),
         authorization: Optional[str] = Header(None),
     ):
-        user = get_current_user(session_token, authorization)
+        user = await get_current_user(session_token, authorization)
 
         try:
             # Get Supabase client
-            supabase_client = supabase()
+            supabase_client = supabase
             
             # Check if share link exists and belongs to the user
             share_response = supabase_client.table("shared_reports").select("id").eq("id", share_id).eq("owner_id", user["user_id"]).execute()
