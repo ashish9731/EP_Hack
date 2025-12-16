@@ -8,10 +8,10 @@ const getApiUrl = () => {
     return process.env.REACT_APP_BACKEND_URL;
   }
   
-  // For local development
+  // For local development - force port 5002
   if (typeof window !== 'undefined') {
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-      return 'http://localhost:5001';
+      return 'http://localhost:5002';
     }
     
     // For production, use the production backend URL if available
