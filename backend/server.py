@@ -179,6 +179,22 @@ async def login(request: LoginRequest, response: Response):
         
         print(f"DEBUG: Generated session token: {session_token}")  # Debug print
         
+        # Save session to database
+        from datetime import datetime, timezone, timedelta
+        session_id = str(uuid.uuid4())
+        expires_at = datetime.now(timezone.utc) + timedelta(days=7)
+        
+        session_record = {
+            "id": session_id,
+            "user_id": user_data.id,
+            "session_token": session_token,
+            "expires_at": expires_at.isoformat()
+        }
+        
+        # Insert session record into database
+        supabase.table("user_sessions").insert(session_record).execute()
+        print(f"DEBUG: Saved session to database: {session_record}")  # Debug print
+        
         # Check if we're in development mode
         is_production = not os.getenv("DEV_MODE", "false").lower() == "true"
         
